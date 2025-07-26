@@ -1,11 +1,12 @@
-const db = require('../db');
+const db = require('../../db');
 
 exports.createRequest = async (req, res) => {
-  const { user_id, full_name, document_type, document_url } = req.body;
+  const { user_id, type, data, file_url } = req.body;
+
   try {
     const result = await db.query(
-      'INSERT INTO requests (user_id, full_name, document_type, document_url, status, created_at) VALUES ($1, $2, $3, $4, $5, NOW()) RETURNING *',
-      [user_id, full_name, document_type, document_url, 'Recibido']
+      'INSERT INTO requests (user_id, type, status, data, file_url, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING *',
+      [user_id, type, 'recibido', data, file_url]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -16,7 +17,7 @@ exports.createRequest = async (req, res) => {
 exports.getUserRequests = async (req, res) => {
   const userId = req.params.userId;
   try {
-    const result = await db.query('SELECT * FROM requests WHERE user_id = $1', [userId]);
+    const result = await db.query('SELECT * FROM requests WHERE user_id = $1 ORDER BY created_at DESC', [userId]);
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });

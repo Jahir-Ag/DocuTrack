@@ -1,4 +1,4 @@
-const db = require('../db');
+const db = require('../../db');
 
 exports.getAllRequests = async (req, res) => {
   try {
@@ -13,7 +13,7 @@ exports.updateStatus = async (req, res) => {
   const { request_id, new_status } = req.body;
   try {
     const result = await db.query(
-      'UPDATE requests SET status = $1 WHERE id = $2 RETURNING *',
+      'UPDATE requests SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING *',
       [new_status, request_id]
     );
     res.json(result.rows[0]);
