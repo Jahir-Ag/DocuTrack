@@ -1,14 +1,28 @@
 const express = require('express');
-const router = express.Router();
+const cors = require('cors');
+const morgan = require('morgan');
+const app = express();
+const errorHandler = require('./middlewares/errorHandler');
 
 const authRoutes = require('./routes/authRoutes');
-const requestRoutes = require('./routes/requestRoutes');
-const adminRoutes = require('./routes/adminRoutes');
 const userRoutes = require('./routes/userRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const requestRoutes = require('./routes/requestRoutes');
 
-router.use('/auth', authRoutes);
-router.use('/requests', requestRoutes);
-router.use('/admin', adminRoutes);
-router.use('/user', userRoutes);
+app.use(cors());
+app.use(express.json());
+app.use(morgan('dev'));
 
-module.exports = router;
+// Rutas
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/requests', requestRoutes);
+
+// Middleware de errores
+app.use(errorHandler);
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Servidor corriendo en el puerto ${PORT}`);
+});

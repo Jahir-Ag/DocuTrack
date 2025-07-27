@@ -1,6 +1,8 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -8,22 +10,105 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id         Int      @id @default(autoincrement())
-  email      String   @unique
-  password   String
-  role       String   @default("USER")
-  created_at DateTime @default(now())
-  requests   Request[]
+enum UserRole {
+  USER
+  ADMIN
 }
 
-model Request {
-  id          Int      @id @default(autoincrement())
-  userId      Int
-  title       String
-  description String?
-  status      String   @default("PENDING")
-  created_at  DateTime @default(now())
+enum CertificateType {
+  NACIMIENTO
+  ESTUDIOS
+  RESIDENCIA
+  ANTECEDENTES
+}
+
+enum RequestStatus {
+  RECIBIDO
+  EN_VALIDACION
+  OBSERVADO
+  APROBADO
+  EMITIDO
+  RECHAZADO
+}
+
+enum UrgencyLevel {
+  NORMAL
+  URGENTE
+}
+
+model User {
+  id                String   @id @default(cuid())
+  email             String   @unique
+  password          String
+  firstName         String
+  lastName          String
+  nationalId        String   @unique
+  phone             String?
+  role              UserRole @default(USER)
+  isActive          Boolean  @default(true)
+  emailVerified     Boolean  @default(false)
+  lastLogin         DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relaciones
+  requests          CertificateRequest[]
+  statusChanges     StatusHistory[]
+
+  @@map("users")
+}
+
+model CertificateRequest {
+  id              String          @id @default(cuid())
+  requestNumber   String          @unique
+  certificateType CertificateType
+  reason          String
+  urgency         UrgencyLevel    @default(NORMAL)
+  status          RequestStatus   @default(RECIBIDO)
+  submittedAt     DateTime        @default(now())
+  processedAt     DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  // Relaciones
+  userId          String
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents       Document[]
+  statusHistory   StatusHistory[]
+
+  @@map("requests")
+}
+
+model Document {
+  id           String   @id @default(cuid())
+  fileName     String
+  originalName String
+  filePath     String
+  fileSize     Int
+  mimeType     String
+  uploadedAt   DateTime @default(now())
+
+  // Relaciones
+  requestId    String
+  request      CertificateRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@map("documents")
+}
+
+model StatusHistory {
+  id          String        @id @default(cuid())
+  oldStatus   RequestStatus
+  newStatus   RequestStatus
+  comment     String?
+  createdAt   DateTime      @default(now())
+
+  // Relaciones
+  requestId   String
+  request     CertificateRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
   
-  user        User     @relation(fields: [userId], references: [id])
+  changedById String
+  changedBy   User          @relation(fields: [changedById], references: [id])
+
+  @@map("status_history")
 }
