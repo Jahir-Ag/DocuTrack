@@ -280,6 +280,7 @@ class UserController {
       }
 
       // Hashear nueva contraseña
+      
       const saltRounds = 12;
       const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
 
@@ -307,23 +308,59 @@ class UserController {
   }
 
   // Desactivar cuenta (soft delete)
-  static async deactivateAccount(req, res) {
-    try {
-      const userId = req.user.id;
-      const { password } = req.body;
 
-      // Verificar contraseña para confirmar
-      const user = await prisma.user.findUnique({
-        where: { id: userId }
-      });
+static async deactivateAccount(req, res) {
+  try {
+    const userId = req.user.id;
+    const { password } = req.body;
 
-      const isValidPassword = await bcrypt.compare(password, user.password);
-      if (!isValidPassword) {
-        return res.status(400).json({ error: 'Contraseña incorrecta' });
+    // Verificar contraseña para confirmar
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    const isValidPassword = await bcrypt.compare(password, user.password);
+    if (!isValidPassword) {
+      return res.status(400).json({ error: 'Contraseña incorrecta' });
+    }
+
+    // Verificar que no tenga solicitudes pendientes
+    const pendingRequests = await prisma.certificateRequest.count({
+      where: {
+        userId,
+        status: {
+          notIn: ['COMPLETADO', 'RECHAZADO']
+        }
       }
+    });
 
-      // Verificar que no tenga solicitudes pendientes
-      const pendingRequests = await prisma.certificateRequest.count({
-        where: {
-          userId,
-          status: {
+    if (pendingRequests > 0) {
+      return res.status(400).json({ error: 'No puedes desactivar tu cuenta con trámites pendientes' });
+    }
+
+    // Soft delete: marcar cuenta como inactiva
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        isActive: false,
+        updatedAt: new Date()
+      }
+    });
+
+    res.json({
+      success: true,
+      message: 'Cuenta desactivada exitosamente'
+    });
+
+  } catch (error) {
+    console.error('Error desactivando cuenta:', error);
+    res.status(500).json({
+      error: 'Error interno del servidor',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+}}

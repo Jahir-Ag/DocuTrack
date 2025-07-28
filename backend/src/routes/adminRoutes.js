@@ -238,6 +238,38 @@ router.put('/requests/:id/status', [
 });
 
 // GET /api/admin/requests/:id/documents/:docId - Descargar documento
+
 router.get('/requests/:id/documents/:docId', async (req, res) => {
   try {
-    const document = await prisma.document.fin
+    const { id: requestId, docId } = req.params;
+
+    const document = await prisma.document.findFirst({
+      where: {
+        id: docId,
+        requestId
+      }
+    });
+
+    if (!document) {
+      return res.status(404).json({ error: 'Documento no encontrado' });
+    }
+
+    const fs = require('fs').promises;
+
+    try {
+      await fs.access(document.filePath);
+    } catch {
+      return res.status(404).json({ error: 'Archivo no encontrado en el sistema' });
+    }
+
+    res.setHeader('Content-Type', document.mimeType);
+    res.setHeader('Content-Disposition', `attachment; filename="${document.originalName}"`);
+
+    const fileBuffer = await fs.readFile(document.filePath);
+    res.send(fileBuffer);
+
+  } catch (error) {
+    console.error('Error descargando documento:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});

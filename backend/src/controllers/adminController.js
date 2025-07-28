@@ -427,14 +427,64 @@ class AdminController {
   }
 
   // Gestión de usuarios
-  static async getAllUsers(req, res) {
-    try {
-      const { page = 1, limit = 10, search, role, isActive } = req.query;
-      const skip = (parseInt(page) - 1) * parseInt(limit);
+static async getAllUsers(req, res) {
+  try {
+    const { page = 1, limit = 10, search, role, isActive } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
 
-      const where = {
-        ...(role && { role }),
-        ...(isActive !== undefined && { isActive: isActive === 'true' }),
-        ...(search && {
-          OR: [
-            { firstName: { contains:
+    const where = {
+      ...(role && { role }),
+      ...(isActive !== undefined && { isActive: isActive === 'true' }),
+      ...(search && {
+        OR: [
+          { firstName: { contains: search, mode: 'insensitive' } },
+          { lastName: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } },
+          { nationalId: { contains: search, mode: 'insensitive' } }
+        ]
+      })
+    };
+
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: parseInt(limit),
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          nationalId: true,
+          phone: true,
+          role: true,
+          isActive: true,
+          createdAt: true
+        }
+      }),
+      prisma.user.count({ where })
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        users,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / parseInt(limit))
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error obteniendo usuarios:', error);
+    res.status(500).json({
+      error: 'Error interno del servidor',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+}
+}

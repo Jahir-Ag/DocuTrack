@@ -1,21 +1,28 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
+const { registerSchema } = require('../validators/userValidator');
 
 const prisma = new PrismaClient();
 
 // Generar JWT token
-const generateToken = (userId, role) => {
+const generateToken = (user) => {
   return jwt.sign(
-    { userId, role },
+    { id: user.id, role: user.role },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+    { expiresIn: '1d' }
   );
 };
 
 class AuthController {
   // Registro de usuario
   static async register(req, res) {
+    // Validación con Joi
+    const { error } = registerSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
     try {
       const { email, password, firstName, lastName, phone, nationalId } = req.body;
 
@@ -30,14 +37,15 @@ class AuthController {
       });
 
       if (existingUser) {
-        return res.status(400).json({ 
-          error: existingUser.email === email 
-            ? 'El email ya está registrado' 
-            : 'La cédula ya está registrada' 
+        return res.status(400).json({
+          error: existingUser.email === email
+            ? 'El email ya está registrado'
+            : 'La cédula ya está registrada'
         });
       }
 
       // Hashear contraseña
+      const bcrypt = require('bcrypt');
       const saltRounds = 12;
       const hashedPassword = await bcrypt.hash(password, saltRounds);
 
@@ -65,7 +73,7 @@ class AuthController {
       });
 
       // Generar token
-      const token = generateToken(user.id, user.role);
+      const token = generateToken(user);
 
       res.status(201).json({
         success: true,
@@ -78,7 +86,7 @@ class AuthController {
 
     } catch (error) {
       console.error('Error en registro:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Error interno del servidor',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
@@ -111,7 +119,7 @@ class AuthController {
       }
 
       // Generar token
-      const token = generateToken(user.id, user.role);
+      const token = generateToken(user);
 
       // Actualizar último login
       await prisma.user.update({
@@ -136,7 +144,7 @@ class AuthController {
 
     } catch (error) {
       console.error('Error en login:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Error interno del servidor',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
@@ -150,15 +158,16 @@ class AuthController {
       const token = authHeader && authHeader.split(' ')[1];
 
       if (!token) {
-        return res.status(401).json({ 
+        return res.status(401).json({
           valid: false,
-          error: 'Token requerido' 
+          error: 'Token requerido'
         });
       }
 
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
       const user = await prisma.user.findUnique({
-        where: { id: decoded.userId },
+        where: { id: decoded.id },
         select: {
           id: true,
           email: true,
@@ -170,35 +179,35 @@ class AuthController {
       });
 
       if (!user || !user.isActive) {
-        return res.status(401).json({ 
+        return res.status(401).json({
           valid: false,
-          error: 'Usuario no válido' 
+          error: 'Usuario no válido'
         });
       }
 
-      res.json({ 
-        valid: true, 
-        user 
+      res.json({
+        valid: true,
+        user
       });
 
     } catch (error) {
       if (error.name === 'JsonWebTokenError') {
-        return res.status(401).json({ 
-          valid: false, 
-          error: 'Token inválido' 
+        return res.status(401).json({
+          valid: false,
+          error: 'Token inválido'
         });
       }
       if (error.name === 'TokenExpiredError') {
-        return res.status(401).json({ 
-          valid: false, 
-          error: 'Token expirado' 
+        return res.status(401).json({
+          valid: false,
+          error: 'Token expirado'
         });
       }
-      
+
       console.error('Error verificando token:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         valid: false,
-        error: 'Error interno del servidor' 
+        error: 'Error interno del servidor'
       });
     }
   }
@@ -221,6 +230,7 @@ class AuthController {
       }
 
       // Hashear nueva contraseña
+      const bcrypt = require('bcrypt');
       const saltRounds = 12;
       const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
 
@@ -237,7 +247,7 @@ class AuthController {
 
     } catch (error) {
       console.error('Error cambiando contraseña:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Error interno del servidor',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
@@ -274,7 +284,7 @@ class AuthController {
 
     } catch (error) {
       console.error('Error obteniendo perfil:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Error interno del servidor',
         details: process.env.NODE_ENV === 'development' ? error.message : undefined
       });
