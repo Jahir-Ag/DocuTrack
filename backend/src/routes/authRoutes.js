@@ -37,8 +37,9 @@ router.post('/register', registerValidation, async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ 
-        error: 'Datos inválidos', 
-        details: errors.array() 
+        success: false,
+        message: 'Datos inválidos', 
+        errors: errors.array() 
       });
     }
 
@@ -56,7 +57,8 @@ router.post('/register', registerValidation, async (req, res) => {
 
     if (existingUser) {
       return res.status(400).json({ 
-        error: existingUser.email === email 
+        success: false,
+        message: existingUser.email === email 
           ? 'El email ya está registrado' 
           : 'La cédula ya está registrada' 
       });
@@ -82,6 +84,8 @@ router.post('/register', registerValidation, async (req, res) => {
         email: true,
         firstName: true,
         lastName: true,
+        nationalId: true,
+        phone: true,
         role: true,
         createdAt: true
       }
@@ -91,14 +95,20 @@ router.post('/register', registerValidation, async (req, res) => {
     const token = generateToken(user.id, user.role);
 
     res.status(201).json({
+      success: true,
       message: 'Usuario registrado exitosamente',
-      user,
-      token
+      data: {
+        user,
+        token
+      }
     });
 
   } catch (error) {
     console.error('Error en registro:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(500).json({ 
+      success: false,
+      message: 'Error interno del servidor' 
+    });
   }
 });
 
@@ -108,8 +118,9 @@ router.post('/login', loginValidation, async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ 
-        error: 'Datos inválidos', 
-        details: errors.array() 
+        success: false,
+        message: 'Datos inválidos', 
+        errors: errors.array() 
       });
     }
 
@@ -121,39 +132,56 @@ router.post('/login', loginValidation, async (req, res) => {
     });
 
     if (!user) {
-      return res.status(401).json({ error: 'Credenciales inválidas' });
+      return res.status(401).json({ 
+        success: false,
+        message: 'Credenciales inválidas' 
+      });
     }
 
     // Verificar contraseña
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
-      return res.status(401).json({ error: 'Credenciales inválidas' });
+      return res.status(401).json({ 
+        success: false,
+        message: 'Credenciales inválidas' 
+      });
     }
 
     // Generar token
     const token = generateToken(user.id, user.role);
 
-    // Actualizar último login
-    await prisma.user.update({
-      where: { id: user.id },
-      data: { lastLogin: new Date() }
-    });
+    // Actualizar último login (opcional - solo si tienes el campo en tu modelo)
+    try {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { lastLogin: new Date() }
+      });
+    } catch (error) {
+      // Si no existe el campo lastLogin, simplemente continúa
+      console.warn('Campo lastLogin no existe en el modelo User');
+    }
 
     res.json({
+      success: true,
       message: 'Login exitoso',
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role
-      },
-      token
+      data: {
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: user.role
+        },
+        token
+      }
     });
 
   } catch (error) {
     console.error('Error en login:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(500).json({ 
+      success: false,
+      message: 'Error interno del servidor' 
+    });
   }
 });
 
@@ -164,7 +192,10 @@ router.post('/verify', async (req, res) => {
     const token = authHeader && authHeader.split(' ')[1];
 
     if (!token) {
-      return res.status(401).json({ error: 'Token requerido' });
+      return res.status(401).json({ 
+        success: false,
+        message: 'Token requerido' 
+      });
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -175,25 +206,43 @@ router.post('/verify', async (req, res) => {
         email: true,
         firstName: true,
         lastName: true,
+        nationalId: true,
+        phone: true,
         role: true
       }
     });
 
     if (!user) {
-      return res.status(401).json({ error: 'Usuario no válido' });
+      return res.status(401).json({ 
+        success: false,
+        message: 'Usuario no válido' 
+      });
     }
 
     res.json({ 
-      valid: true, 
-      user 
+      success: true,
+      data: {
+        valid: true, 
+        user 
+      }
     });
 
   } catch (error) {
     res.status(401).json({ 
+      success: false,
       valid: false, 
-      error: 'Token inválido' 
+      message: 'Token inválido' 
     });
   }
+});
+
+// POST /api/auth/logout - Cerrar sesión (opcional - para invalidar token del lado del cliente)
+router.post('/logout', (req, res) => {
+  // En JWT stateless, el logout se maneja del lado del cliente eliminando el token
+  res.json({
+    success: true,
+    message: 'Sesión cerrada exitosamente'
+  });
 });
 
 module.exports = router;
