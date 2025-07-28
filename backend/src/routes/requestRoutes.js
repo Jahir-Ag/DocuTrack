@@ -4,7 +4,8 @@ const path = require('path');
 const fs = require('fs').promises;
 const { PrismaClient } = require('@prisma/client');
 const { body, validationResult } = require('express-validator');
-const { requireUser } = require('../middleware/auth');
+const { requireUser } = require('../middlewares/auth');
+const { generateCertificatePDF } = require('../utils/pdfGenerator'); // ✅ MOVIDO AL INICIO
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -240,7 +241,8 @@ router.get('/:id/download', requireUser, async (req, res) => {
             firstName: true,
             lastName: true,
             nationalId: true,
-            email: true
+            email: true,
+            phone: true // ✅ AGREGADO PHONE
           }
         }
       }
@@ -252,8 +254,7 @@ router.get('/:id/download', requireUser, async (req, res) => {
       });
     }
 
-    // Generar PDF del certificado
-    const { generateCertificatePDF } = require('../utils/pdfGenerator');
+    // ✅ REMOVIDO EL REQUIRE DINÁMICO - ahora usa la importación del inicio
     const pdfBuffer = await generateCertificatePDF(request);
 
     res.setHeader('Content-Type', 'application/pdf');

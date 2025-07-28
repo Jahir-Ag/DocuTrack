@@ -1,13 +1,13 @@
 const express = require('express');
 const { body, query } = require('express-validator');
-const { validateRequest } = require('../middleware/validation');
-const { authenticateToken } = require('../middleware/auth');
-const UserController = require('../controllers/userController');
+const { handleValidationErrors } = require('../middlewares/validation');
+const { authenticateToken } = require('../middlewares/auth');  // Cambiado a authenticateToken
+const userController = require('../controllers/userController');
 
 const router = express.Router();
 
 // Middleware: todas las rutas requieren autenticación
-router.use(authenticateToken);
+router.use(authenticateToken);  // Cambiado a authenticateToken
 
 // Validaciones
 const updateProfileValidation = [
@@ -22,7 +22,8 @@ const updateProfileValidation = [
   body('phone')
     .optional()
     .isMobilePhone('any')
-    .withMessage('Número de teléfono inválido')
+    .withMessage('Número de teléfono inválido'),
+  handleValidationErrors
 ];
 
 const changePasswordValidation = [
@@ -40,7 +41,8 @@ const changePasswordValidation = [
         throw new Error('Las contraseñas no coinciden');
       }
       return true;
-    })
+    }),
+  handleValidationErrors
 ];
 
 const paginationValidation = [
@@ -51,32 +53,43 @@ const paginationValidation = [
   query('limit')
     .optional()
     .isInt({ min: 1, max: 50 })
-    .withMessage('El límite debe estar entre 1 y 50')
+    .withMessage('El límite debe estar entre 1 y 50'),
+  handleValidationErrors
+];
+
+const emailValidation = [
+  query('email')
+    .isEmail()
+    .withMessage('Email inválido'),
+  handleValidationErrors
+];
+
+const deactivateValidation = [
+  body('password')
+    .notEmpty()
+    .withMessage('Contraseña requerida para confirmar'),
+  handleValidationErrors
 ];
 
 // GET /api/users/profile - Obtener perfil del usuario
-router.get('/profile', UserController.getProfile);
+router.get('/profile', userController.getProfile);
 
 // PUT /api/users/profile - Actualizar perfil del usuario
-router.put('/profile', updateProfileValidation, validateRequest, UserController.updateProfile);
+router.put('/profile', updateProfileValidation, userController.updateProfile);
 
 // GET /api/users/stats - Obtener estadísticas del usuario
-router.get('/stats', UserController.getStats);
+router.get('/stats', userController.getStats);
 
 // GET /api/users/history - Obtener historial de solicitudes
-router.get('/history', paginationValidation, validateRequest, UserController.getRequestHistory);
+router.get('/history', paginationValidation, userController.getRequestHistory);
 
 // POST /api/users/change-password - Cambiar contraseña
-router.post('/change-password', changePasswordValidation, validateRequest, UserController.changePassword);
+router.post('/change-password', changePasswordValidation, userController.changePassword);
 
 // GET /api/users/check-email - Verificar disponibilidad de email
-router.get('/check-email', [
-  query('email').isEmail().withMessage('Email inválido')
-], validateRequest, UserController.checkEmailAvailability);
+router.get('/check-email', emailValidation, userController.checkEmailAvailability);
 
 // POST /api/users/deactivate - Desactivar cuenta
-router.post('/deactivate', [
-  body('password').notEmpty().withMessage('Contraseña requerida para confirmar')
-], validateRequest, UserController.deactivateAccount);
+router.post('/deactivate', deactivateValidation, userController.deactivateAccount);
 
 module.exports = router;

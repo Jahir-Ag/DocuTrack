@@ -118,16 +118,17 @@ class PDFGenerator {
        .font('Helvetica-Bold')
        .text(request.requestNumber, 200, currentY);
 
-    // Fecha de emisión
+    // Fecha de emisión - ✅ CORRIGIDO: usar completedAt o updatedAt
     doc.fontSize(12)
        .fillColor(secondaryColor)
        .font('Helvetica')
        .text('Fecha de Emisión:', 50, currentY + 20);
     
+    const emissionDate = request.completedAt || request.updatedAt || new Date();
     doc.fontSize(12)
        .fillColor(primaryColor)
        .font('Helvetica-Bold')
-       .text(new Date(request.completedAt).toLocaleDateString('es-ES'), 200, currentY + 20);
+       .text(new Date(emissionDate).toLocaleDateString('es-ES'), 200, currentY + 20);
 
     // Fecha de solicitud
     doc.fontSize(12)
@@ -321,7 +322,9 @@ class PDFGenerator {
 
   // Generar código de verificación único
   static generateVerificationCode(request) {
-    const timestamp = new Date(request.completedAt).getTime();
+    // ✅ CORRIGIDO: usar completedAt o updatedAt si completedAt no existe
+    const completedDate = request.completedAt || request.updatedAt || new Date();
+    const timestamp = new Date(completedDate).getTime();
     const hash = require('crypto')
       .createHash('md5')
       .update(`${request.id}-${request.requestNumber}-${timestamp}`)

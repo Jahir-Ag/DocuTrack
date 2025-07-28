@@ -2,13 +2,14 @@ const express = require('express');
 const path = require('path');
 const { PrismaClient } = require('@prisma/client');
 const { body, validationResult } = require('express-validator');
-const { requireAdmin } = require('../middleware/auth');
+const { authenticateToken, requireRole } = require('../middlewares/auth');
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Aplicar middleware de admin a todas las rutas
-router.use(requireAdmin);
+// Aplicar middleware de autenticación y admin a todas las rutas
+router.use(authenticateToken);
+router.use(requireRole(['admin']));
 
 // GET /api/admin/requests - Obtener todas las solicitudes
 router.get('/requests', async (req, res) => {
@@ -91,22 +92,29 @@ router.get('/requests', async (req, res) => {
     });
 
     res.json({
-      requests,
-      stats: stats.reduce((acc, stat) => {
-        acc[stat.status] = stat._count.status;
-        return acc;
-      }, {}),
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / parseInt(limit))
+      success: true,
+      data: {
+        requests,
+        stats: stats.reduce((acc, stat) => {
+          acc[stat.status] = stat._count.status;
+          return acc;
+        }, {}),
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / parseInt(limit))
+        }
       }
     });
 
   } catch (error) {
     console.error('Error obteniendo solicitudes:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(500).json({ 
+      success: false,
+      error: 'Error interno del servidor',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
@@ -153,14 +161,24 @@ router.get('/requests/:id', async (req, res) => {
     });
 
     if (!request) {
-      return res.status(404).json({ error: 'Solicitud no encontrada' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Solicitud no encontrada' 
+      });
     }
 
-    res.json({ request });
+    res.json({ 
+      success: true,
+      data: { request }
+    });
 
   } catch (error) {
     console.error('Error obteniendo solicitud:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(500).json({ 
+      success: false,
+      error: 'Error interno del servidor',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
@@ -175,6 +193,7 @@ router.put('/requests/:id/status', [
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ 
+        success: false,
         error: 'Datos inválidos', 
         details: errors.array() 
       });
@@ -189,7 +208,10 @@ router.put('/requests/:id/status', [
     });
 
     if (!existingRequest) {
-      return res.status(404).json({ error: 'Solicitud no encontrada' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Solicitud no encontrada' 
+      });
     }
 
     // Actualizar en transacción
@@ -199,7 +221,8 @@ router.put('/requests/:id/status', [
         where: { id: requestId },
         data: {
           status,
-          updatedAt: new Date()
+          updatedAt: new Date(),
+          ...(status === 'EMITIDO' && { completedAt: new Date() })
         },
         include: {
           user: {
@@ -227,31 +250,47 @@ router.put('/requests/:id/status', [
     });
 
     res.json({
+      success: true,
       message: 'Estado actualizado exitosamente',
-      request: result
+      data: { request: result }
     });
 
   } catch (error) {
     console.error('Error actualizando estado:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(500).json({ 
+      success: false,
+      error: 'Error interno del servidor',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
 // GET /api/admin/requests/:id/documents/:docId - Descargar documento
-
 router.get('/requests/:id/documents/:docId', async (req, res) => {
   try {
     const { id: requestId, docId } = req.params;
 
+    // Verificar que el documento existe y pertenece a la solicitud
     const document = await prisma.document.findFirst({
       where: {
         id: docId,
         requestId
+      },
+      include: {
+        request: {
+          select: {
+            id: true,
+            requestNumber: true
+          }
+        }
       }
     });
 
     if (!document) {
-      return res.status(404).json({ error: 'Documento no encontrado' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Documento no encontrado' 
+      });
     }
 
     const fs = require('fs').promises;
@@ -259,17 +298,110 @@ router.get('/requests/:id/documents/:docId', async (req, res) => {
     try {
       await fs.access(document.filePath);
     } catch {
-      return res.status(404).json({ error: 'Archivo no encontrado en el sistema' });
+      return res.status(404).json({ 
+        success: false,
+        error: 'Archivo no encontrado en el sistema' 
+      });
     }
 
+    // Configurar headers para descarga
     res.setHeader('Content-Type', document.mimeType);
     res.setHeader('Content-Disposition', `attachment; filename="${document.originalName}"`);
+    res.setHeader('Content-Length', document.fileSize);
 
     const fileBuffer = await fs.readFile(document.filePath);
     res.send(fileBuffer);
 
   } catch (error) {
     console.error('Error descargando documento:', error);
-    res.status(500).json({ error: 'Error interno del servidor' });
+    res.status(500).json({ 
+      success: false,
+      error: 'Error interno del servidor',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
+
+// GET /api/admin/dashboard - Dashboard con estadísticas generales
+router.get('/dashboard', async (req, res) => {
+  try {
+    const [
+      totalUsers,
+      totalRequests,
+      pendingRequests,
+      completedRequests,
+      recentRequests
+    ] = await Promise.all([
+      prisma.user.count({ where: { role: 'user' } }),
+      prisma.certificateRequest.count(),
+      prisma.certificateRequest.count({ 
+        where: { 
+          status: { 
+            notIn: ['EMITIDO', 'RECHAZADO'] 
+          } 
+        } 
+      }),
+      prisma.certificateRequest.count({ where: { status: 'EMITIDO' } }),
+      prisma.certificateRequest.findMany({
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          }
+        }
+      })
+    ]);
+
+    // Estadísticas por tipo de certificado
+    const typeStats = await prisma.certificateRequest.groupBy({
+      by: ['certificateType'],
+      _count: {
+        certificateType: true
+      }
+    });
+
+    // Estadísticas por estado
+    const statusStats = await prisma.certificateRequest.groupBy({
+      by: ['status'],
+      _count: {
+        status: true
+      }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        summary: {
+          totalUsers,
+          totalRequests,
+          pendingRequests,
+          completedRequests
+        },
+        typeStats: typeStats.reduce((acc, stat) => {
+          acc[stat.certificateType] = stat._count.certificateType;
+          return acc;
+        }, {}),
+        statusStats: statusStats.reduce((acc, stat) => {
+          acc[stat.status] = stat._count.status;
+          return acc;
+        }, {}),
+        recentRequests
+      }
+    });
+
+  } catch (error) {
+    console.error('Error obteniendo dashboard:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Error interno del servidor',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+module.exports = router;
