@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -74,7 +71,9 @@ model CertificateRequest {
   // Relaciones
   userId          String
   user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  documents       Document[]
+
+  document        Document?       
+
   statusHistory   StatusHistory[]
 
   @@map("requests")
@@ -90,7 +89,7 @@ model Document {
   uploadedAt   DateTime @default(now())
 
   // Relaciones
-  requestId    String
+  requestId    String   @unique
   request      CertificateRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
 
   @@map("documents")

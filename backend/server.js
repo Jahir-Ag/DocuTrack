@@ -11,6 +11,11 @@ const authRoutes = require('./src/routes/authRoutes');
 const userRoutes = require('./src/routes/userRoutes');
 const requestRoutes = require('./src/routes/requestRoutes');
 const adminRoutes = require('./src/routes/adminRoutes');
+const pdfRoutes = require('./src/routes/pdfRoutes');
+
+// Registrar las rutas
+app.use('/api/certificates', pdfRoutes);
+
 
 const app = express();
 const PORT = process.env.PORT || 3001;
