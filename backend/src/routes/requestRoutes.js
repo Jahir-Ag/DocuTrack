@@ -4,19 +4,66 @@ const fs = require('fs').promises;
 const { PrismaClient } = require('@prisma/client');
 const { body, validationResult } = require('express-validator');
 const { requireUser } = require('../middlewares/auth');
-const { uploadDocument, cleanupFile } = require('../middlewares/uploadsMiddleware'); // Cambiado
+const { uploadDocument, cleanupFile } = require('../middlewares/uploadsMiddleware');
 const { generateCertificatePDF } = require('../utils/pdfGenerator');
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// Validaciones
+// ✅ VALIDACIONES CORREGIDAS - Agregar todos los campos requeridos
 const requestValidation = [
-  body('certificateType').isIn(['NACIMIENTO', 'ESTUDIOS', 'RESIDENCIA', 'ANTECEDENTES'])
+  body('certificateType')
+    .isIn(['NACIMIENTO', 'ESTUDIOS', 'RESIDENCIA', 'ANTECEDENTES'])
     .withMessage('Tipo de certificado inválido'),
-  body('reason').trim().isLength({ min: 10, max: 500 })
+  
+  // ✅ AGREGAR VALIDACIONES PARA CAMPOS PERSONALES
+  body('firstName')
+    .trim()
+    .isLength({ min: 2, max: 50 })
+    .withMessage('El nombre debe tener entre 2 y 50 caracteres'),
+  
+  body('lastName')
+    .trim()
+    .isLength({ min: 2, max: 50 })
+    .withMessage('El apellido debe tener entre 2 y 50 caracteres'),
+  
+  body('email')
+    .isEmail()
+    .withMessage('Debe ser un email válido'),
+  
+  body('phone')
+    .trim()
+    .isLength({ min: 8, max: 20 })
+    .withMessage('El teléfono debe tener entre 8 y 20 caracteres'),
+  
+  body('cedula')
+    .trim()
+    .isLength({ min: 8, max: 15 })
+    .withMessage('La cédula debe tener entre 8 y 15 caracteres'),
+  
+  body('birthDate')
+    .isISO8601()
+    .withMessage('La fecha de nacimiento debe ser válida'),
+  
+  body('address')
+    .trim()
+    .isLength({ min: 10, max: 200 })
+    .withMessage('La dirección debe tener entre 10 y 200 caracteres'),
+  
+  body('reason')
+    .trim()
+    .isLength({ min: 10, max: 500 })
     .withMessage('La razón debe tener entre 10 y 500 caracteres'),
-  body('urgency').optional().isIn(['NORMAL', 'URGENTE'])
+  
+  body('additionalInfo')
+    .optional()
+    .trim()
+    .isLength({ max: 500 })
+    .withMessage('La información adicional no puede exceder 500 caracteres'),
+    
+  body('urgency')
+    .optional()
+    .isIn(['NORMAL', 'URGENTE'])
     .withMessage('Urgencia inválida')
 ];
 
@@ -38,7 +85,7 @@ router.get('/', requireUser, async (req, res) => {
         skip,
         take: parseInt(limit),
         include: {
-          document: { // Cambiado de 'documents' a 'document' (singular)
+          document: {
             select: {
               id: true,
               fileName: true,
@@ -71,36 +118,89 @@ router.get('/', requireUser, async (req, res) => {
 // POST /api/requests - Crear nueva solicitud
 router.post('/', requireUser, uploadDocument, requestValidation, async (req, res) => {
   try {
+    console.log('🔍 BACKEND DEBUG - Datos recibidos:');
+    console.log('Body:', req.body);
+    console.log('File:', req.file ? {
+      filename: req.file.filename,
+      originalname: req.file.originalname,
+      size: req.file.size,
+      mimetype: req.file.mimetype
+    } : 'No file');
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('❌ BACKEND - Errores de validación:', errors.array());
       // Limpiar archivo subido si hay errores de validación
-      await cleanupFile(req.file); // Cambiado de cleanupFiles a cleanupFile
+      await cleanupFile(req.file);
       return res.status(400).json({ 
         error: 'Datos inválidos', 
         details: errors.array() 
       });
     }
 
-    const { certificateType, reason, urgency = 'NORMAL' } = req.body;
+    // ✅ EXTRAER TODOS LOS CAMPOS DEL FRONTEND
+    const { 
+      certificateType, 
+      firstName,
+      lastName,
+      email,
+      phone,
+      cedula,
+      birthDate,
+      address,
+      reason, 
+      additionalInfo,
+      urgency = 'NORMAL' 
+    } = req.body;
+
+    console.log('✅ BACKEND - Campos extraídos:', {
+      certificateType,
+      firstName,
+      lastName,
+      email,
+      phone,
+      cedula,
+      birthDate,
+      address,
+      reason,
+      additionalInfo,
+      urgency
+    });
+
+    // Verificar que se subió archivo
+    if (!req.file) {
+      return res.status(400).json({ 
+        error: 'Se requiere adjuntar un documento' 
+      });
+    }
 
     // Generar número de solicitud único
     const requestNumber = `DOC-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
     // Crear solicitud en transacción
     const result = await prisma.$transaction(async (tx) => {
-      // Crear la solicitud
+      // ✅ CREAR LA SOLICITUD CON TODOS LOS CAMPOS
       const request = await tx.certificateRequest.create({
         data: {
           requestNumber,
           certificateType,
+          // ✅ AGREGAR CAMPOS PERSONALES (verificar que existan en tu schema.prisma)
+          firstName,
+          lastName,
+          email,
+          phone,
+          cedula,
+          birthDate: new Date(birthDate),
+          address,
           reason,
+          additionalInfo: additionalInfo || null,
           urgency,
           status: 'RECIBIDO',
           userId: req.user.id
         }
       });
 
-      // Crear documento asociado (solo UNO)
+      // Crear documento asociado
       const document = await tx.document.create({
         data: {
           fileName: req.file.filename,
@@ -115,11 +215,13 @@ router.post('/', requireUser, uploadDocument, requestValidation, async (req, res
       return { request, document };
     });
 
+    console.log('✅ BACKEND - Solicitud creada exitosamente:', result.request.id);
+
     res.status(201).json({
       message: 'Solicitud creada exitosamente',
       request: {
         ...result.request,
-        document: { // Singular
+        document: {
           id: result.document.id,
           fileName: result.document.fileName,
           originalName: result.document.originalName,
@@ -131,13 +233,14 @@ router.post('/', requireUser, uploadDocument, requestValidation, async (req, res
 
   } catch (error) {
     // Limpiar archivo en caso de error
-    await cleanupFile(req.file); // Cambiado
+    await cleanupFile(req.file);
     
-    console.error('Error creando solicitud:', error);
+    console.error('❌ BACKEND - Error creando solicitud:', error);
     res.status(500).json({ error: 'Error interno del servidor' });
   }
 });
 
+// ... resto de las rutas sin cambios
 // GET /api/requests/:id - Obtener solicitud específica
 router.get('/:id', requireUser, async (req, res) => {
   try {
@@ -147,7 +250,7 @@ router.get('/:id', requireUser, async (req, res) => {
         userId: req.user.id
       },
       include: {
-        document: { // Cambiado a singular
+        document: {
           select: {
             id: true,
             fileName: true,
@@ -215,7 +318,7 @@ router.get('/:id/download', requireUser, async (req, res) => {
   }
 });
 
-// DELETE /api/requests/:id - Cancelar solicitud (solo si está en RECIBIDO)
+// DELETE /api/requests/:id - Cancelar solicitud
 router.delete('/:id', requireUser, async (req, res) => {
   try {
     const request = await prisma.certificateRequest.findFirst({
@@ -225,7 +328,7 @@ router.delete('/:id', requireUser, async (req, res) => {
         status: 'RECIBIDO'
       },
       include: {
-        document: true // Cambiado a singular
+        document: true
       }
     });
 
@@ -235,8 +338,8 @@ router.delete('/:id', requireUser, async (req, res) => {
       });
     }
 
-    // Eliminar archivo físico usando el helper
-    await cleanupFile(request.document); // Cambiado
+    // Eliminar archivo físico
+    await cleanupFile(request.document);
 
     // Eliminar de la base de datos
     await prisma.certificateRequest.delete({
