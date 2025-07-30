@@ -1,16 +1,13 @@
 const PDFDocument = require('pdfkit');
-const fs = require('fs');
-const path = require('path');
 const crypto = require('crypto');
 
-class PDFGenerator {
-  // Generar certificado en PDF
+class ModernPDFGenerator {
   static async generateCertificatePDF(request) {
     return new Promise((resolve, reject) => {
       try {
         const doc = new PDFDocument({
           size: 'A4',
-          margin: 50,
+          margin: 40,
           info: {
             Title: `Certificado ${request.certificateType}`,
             Author: 'DocuTrack - Sistema de Gestión de Trámites',
@@ -28,88 +25,100 @@ class PDFGenerator {
         });
         doc.on('error', reject);
 
-        // Configurar fuentes y colores
-        const primaryColor = '#2563eb';
-        const secondaryColor = '#64748b';
-        const accentColor = '#059669';
-        const warningColor = '#dc2626';
+        // Configurar variables de diseño
+        const pageWidth = doc.page.width;
+        const margin = 40;
+        const contentWidth = pageWidth - (margin * 2);
+        let currentY = margin;
 
-        // Header del documento
-        this.addHeader(doc, primaryColor);
+        // Colores modernos
+        const colors = {
+          primary: '#1e40af',
+          secondary: '#64748b',
+          accent: '#0f766e',
+          success: '#059669',
+          text: '#1f2937',
+          light: '#f8fafc',
+          border: '#e2e8f0'
+        };
 
-        // Título principal
-        this.addTitle(doc, request.certificateType, primaryColor);
-
-        // Información del certificado
-        this.addCertificateInfo(doc, request, primaryColor, secondaryColor);
-
-        // Información del solicitante
-        this.addUserInfo(doc, request.user, secondaryColor);
-
-        // Detalles de la solicitud
-        this.addRequestDetails(doc, request, secondaryColor, accentColor);
-
-        // Validación y firma digital
-        this.addValidationSection(doc, request, primaryColor, secondaryColor);
-
-        // Footer
-        this.addFooter(doc, request, secondaryColor);
-
-        // Marca de agua de seguridad
-        this.addWatermark(doc);
-
-        // Código QR de verificación (simulado con texto)
-        this.addQRSection(doc, request, primaryColor);
+        // === HEADER INSTITUCIONAL ===
+        currentY = this.drawHeader(doc, margin, currentY, contentWidth, colors);
+        
+        // === TIPO DE CERTIFICADO ===
+        currentY = this.drawCertificateTitle(doc, request.certificateType, margin, currentY, contentWidth, colors);
+        
+        // === INFORMACIÓN DEL CERTIFICADO ===
+        currentY = this.drawCertificateInfo(doc, request, margin, currentY, contentWidth, colors);
+        
+        // === DATOS DEL SOLICITANTE ===
+        currentY = this.drawPersonalInfo(doc, request, margin, currentY, contentWidth, colors);
+        
+        // === DETALLES DE LA SOLICITUD ===
+        currentY = this.drawRequestDetails(doc, request, margin, currentY, contentWidth, colors);
+        
+        // === VALIDACIÓN Y SEGURIDAD ===
+        currentY = this.drawValidationSection(doc, request, margin, currentY, contentWidth, colors);
+        
+        // === FOOTER ===
+        this.drawFooter(doc, request, margin, colors);
+        
+        // === MARCA DE AGUA ===
+        this.drawWatermark(doc, colors);
 
         doc.end();
 
       } catch (error) {
+        console.error('Error generando PDF:', error);
         reject(error);
       }
     });
   }
 
-  // Header del documento mejorado
-  static addHeader(doc, primaryColor) {
-    const pageCenter = doc.page.width / 2;
+  // === HEADER INSTITUCIONAL ===
+  static drawHeader(doc, margin, startY, contentWidth, colors) {
+    const headerHeight = 80;
     
-    // Rectángulo de header con degradado simulado
-    doc.rect(50, 30, doc.page.width - 100, 100)
-       .fillColor('#f8fafc')
+    // Fondo del header
+    doc.rect(margin, startY, contentWidth, headerHeight)
+       .fillColor(colors.light)
        .fill()
-       .strokeColor(primaryColor)
-       .lineWidth(2)
+       .strokeColor(colors.border)
+       .lineWidth(1)
        .stroke();
-    
-    // Logo o escudo (simulado con texto estilizado)
-    doc.fontSize(24)
-       .fillColor(primaryColor)
+
+    // Escudo/Logo (simulado con emoji)
+    doc.fontSize(32)
+       .fillColor(colors.primary)
+       .text('🏛️', margin + 20, startY + 15);
+
+    // Texto institucional
+    const textX = margin + 80;
+    doc.fontSize(16)
+       .fillColor(colors.primary)
        .font('Helvetica-Bold')
-       .text('🏛️', pageCenter - 15, 45);
-    
-    // Título institucional
-    doc.fontSize(18)
-       .fillColor(primaryColor)
-       .font('Helvetica-Bold')
-       .text('REPÚBLICA DE PANAMÁ', pageCenter - 90, 65, { width: 180, align: 'center' });
+       .text('REPÚBLICA DE PANAMÁ', textX, startY + 10);
     
     doc.fontSize(14)
-       .fillColor('#1f2937')
+       .fillColor(colors.text)
        .font('Helvetica')
-       .text('MINISTERIO DE GOBIERNO', pageCenter - 90, 85, { width: 180, align: 'center' });
+       .text('MINISTERIO DE GOBIERNO', textX, startY + 30);
     
     doc.fontSize(10)
-       .fillColor('#6b7280')
-       .text('Sistema DocuTrack - Gestión Digital de Trámites', pageCenter - 90, 105, { width: 180, align: 'center' });
+       .fillColor(colors.secondary)
+       .text('Sistema DocuTrack - Gestión Digital de Trámites', textX, startY + 50);
 
-    // Fecha y hora de generación
+    // Fecha de generación (alineada a la derecha)
+    const currentDate = new Date().toLocaleString('es-ES');
     doc.fontSize(8)
-       .fillColor('#9ca3af')
-       .text(`Generado: ${new Date().toLocaleString('es-ES')}`, doc.page.width - 200, 40);
+       .fillColor(colors.secondary)
+       .text(`Generado: ${currentDate}`, margin + contentWidth - 120, startY + 10);
+
+    return startY + headerHeight + 30;
   }
 
-  // Título del certificado mejorado
-  static addTitle(doc, certificateType, primaryColor) {
+  // === TÍTULO DEL CERTIFICADO ===
+  static drawCertificateTitle(doc, certificateType, margin, startY, contentWidth, colors) {
     const titles = {
       'NACIMIENTO': 'CERTIFICADO DE NACIMIENTO',
       'ESTUDIOS': 'CERTIFICADO DE ESTUDIOS',
@@ -118,399 +127,347 @@ class PDFGenerator {
     };
 
     const title = titles[certificateType] || 'CERTIFICADO OFICIAL';
+    const titleHeight = 60;
 
-    // Rectángulo decorativo para el título
-    doc.rect(50, 150, doc.page.width - 100, 50)
+    // Fondo del título
+    doc.rect(margin, startY, contentWidth, titleHeight)
        .fillColor('#eff6ff')
        .fill()
-       .strokeColor(primaryColor)
-       .lineWidth(1)
+       .strokeColor(colors.primary)
+       .lineWidth(2)
        .stroke();
 
     // Título principal
-    doc.fontSize(20)
-       .fillColor(primaryColor)
+    doc.fontSize(18)
+       .fillColor(colors.primary)
        .font('Helvetica-Bold')
-       .text(title, 50, 170, {
-         width: doc.page.width - 100,
+       .text(title, margin, startY + 15, {
+         width: contentWidth,
          align: 'center'
        });
 
-    // Subtítulo decorativo
+    // Subtítulo
     doc.fontSize(10)
-       .fillColor('#6b7280')
+       .fillColor(colors.secondary)
        .font('Helvetica')
-       .text('Documento Oficial con Validez Legal', 50, 190, {
-         width: doc.page.width - 100,
+       .text('Documento Oficial con Validez Legal', margin, startY + 40, {
+         width: contentWidth,
          align: 'center'
        });
+
+    return startY + titleHeight + 25;
   }
 
-  // Información del certificado mejorada
-  static addCertificateInfo(doc, request, primaryColor, secondaryColor) {
-    const currentY = 230;
+  // === INFORMACIÓN DEL CERTIFICADO ===
+  static drawCertificateInfo(doc, request, margin, startY, contentWidth, colors) {
+    const sectionHeight = 80;
     
     // Título de sección
     doc.fontSize(12)
-       .fillColor('#1f2937')
+       .fillColor(colors.text)
        .font('Helvetica-Bold')
-       .text('INFORMACIÓN DEL CERTIFICADO', 50, currentY);
+       .text('INFORMACIÓN DEL CERTIFICADO', margin, startY);
 
-    // Línea decorativa
-    doc.moveTo(50, currentY + 15)
-       .lineTo(250, currentY + 15)
-       .strokeColor(primaryColor)
-       .lineWidth(1)
-       .stroke();
-    
-    // Grid de información
-    const infoY = currentY + 25;
-    
-    // Número de certificado
-    doc.fontSize(10)
-       .fillColor(secondaryColor)
-       .font('Helvetica')
-       .text('N° Certificado:', 50, infoY);
-    
-    doc.fontSize(11)
-       .fillColor(primaryColor)
-       .font('Helvetica-Bold')
-       .text(request.requestNumber, 150, infoY);
+    startY += 20;
 
-    // Fecha de emisión
-    doc.fontSize(10)
-       .fillColor(secondaryColor)
-       .font('Helvetica')
-       .text('Fecha Emisión:', 300, infoY);
-    
-    const emissionDate = request.completedAt || request.updatedAt || new Date();
-    doc.fontSize(11)
-       .fillColor(primaryColor)
-       .font('Helvetica-Bold')
-       .text(new Date(emissionDate).toLocaleDateString('es-ES'), 380, infoY);
-
-    // Fecha de solicitud
-    doc.fontSize(10)
-       .fillColor(secondaryColor)
-       .font('Helvetica')
-       .text('Fecha Solicitud:', 50, infoY + 20);
-    
-    doc.fontSize(11)
-       .fillColor('#1f2937')
-       .font('Helvetica')
-       .text(new Date(request.createdAt).toLocaleDateString('es-ES'), 150, infoY + 20);
-
-    // Estado
-    doc.fontSize(10)
-       .fillColor(secondaryColor)
-       .font('Helvetica')
-       .text('Estado:', 300, infoY + 20);
-    
-    doc.fontSize(11)
-       .fillColor('#059669')
-       .font('Helvetica-Bold')
-       .text('EMITIDO ✓', 380, infoY + 20);
-  }
-
-  // Información del solicitante mejorada
-  static addUserInfo(doc, user, secondaryColor) {
-    const currentY = 310;
-    
-    // Título de sección
-    doc.fontSize(12)
-       .fillColor('#1f2937')
-       .font('Helvetica-Bold')
-       .text('DATOS DEL SOLICITANTE', 50, currentY);
-
-    // Línea decorativa
-    doc.moveTo(50, currentY + 15)
-       .lineTo(220, currentY + 15)
-       .strokeColor('#059669')
-       .lineWidth(1)
-       .stroke();
-
-    // Rectángulo de fondo con bordes redondeados (simulado)
-    doc.rect(50, currentY + 25, doc.page.width - 100, 120)
-       .fillColor('#f9fafb')
-       .fill()
-       .strokeColor('#e5e7eb')
-       .lineWidth(1)
-       .stroke();
-
-    // Información personal en grid
-    const userY = currentY + 40;
-    
-    // Nombre completo
-    doc.fontSize(10)
-       .fillColor(secondaryColor)
-       .font('Helvetica')
-       .text('Nombre Completo:', 60, userY);
-    
-    doc.fontSize(12)
-       .fillColor('#1f2937')
-       .font('Helvetica-Bold')
-       .text(`${user.firstName} ${user.lastName}`, 170, userY);
-
-    // Cédula
-    doc.fontSize(10)
-       .fillColor(secondaryColor)
-       .font('Helvetica')
-       .text('Cédula de Identidad:', 60, userY + 25);
-    
-    doc.fontSize(12)
-       .fillColor('#1f2937')
-       .font('Helvetica-Bold')
-       .text(user.nationalId, 170, userY + 25);
-
-    // Email
-    doc.fontSize(10)
-       .fillColor(secondaryColor)
-       .font('Helvetica')
-       .text('Correo Electrónico:', 60, userY + 50);
-    
-    doc.fontSize(10)
-       .fillColor('#1f2937')
-       .font('Helvetica')
-       .text(user.email, 170, userY + 50);
-
-    // Teléfono
-    doc.fontSize(10)
-       .fillColor(secondaryColor)
-       .font('Helvetica')
-       .text('Teléfono:', 60, userY + 75);
-    
-    doc.fontSize(10)
-       .fillColor('#1f2937')
-       .font('Helvetica')
-       .text(user.phone || 'No proporcionado', 170, userY + 75);
-
-    // Icono decorativo
-    doc.fontSize(16)
-       .fillColor('#d1d5db')
-       .text('👤', doc.page.width - 90, userY + 30);
-  }
-
-  // Detalles de la solicitud mejorados
-  static addRequestDetails(doc, request, secondaryColor, accentColor) {
-    const currentY = 480;
-    
-    // Título de sección
-    doc.fontSize(12)
-       .fillColor('#1f2937')
-       .font('Helvetica-Bold')
-       .text('DETALLES DE LA SOLICITUD', 50, currentY);
-
-    // Línea decorativa
-    doc.moveTo(50, currentY + 15)
-       .lineTo(240, currentY + 15)
-       .strokeColor(accentColor)
-       .lineWidth(1)
-       .stroke();
-
-    // Motivo de la solicitud
-    doc.fontSize(10)
-       .fillColor(secondaryColor)
-       .font('Helvetica')
-       .text('Motivo de la solicitud:', 50, currentY + 30);
-    
-    // Rectángulo para el motivo
-    doc.rect(50, currentY + 45, doc.page.width - 100, 60)
+    // Fondo de la sección
+    doc.rect(margin, startY, contentWidth, sectionHeight - 20)
        .fillColor('#fafafa')
        .fill()
-       .strokeColor('#e5e7eb')
+       .strokeColor(colors.border)
        .lineWidth(1)
        .stroke();
+
+    const infoStartY = startY + 15;
+    const leftCol = margin + 20;
+    const rightCol = margin + (contentWidth / 2) + 20;
+
+    // Información en dos columnas
+    doc.fontSize(9)
+       .fillColor(colors.secondary)
+       .font('Helvetica')
+       .text('Número de Certificado:', leftCol, infoStartY);
     
     doc.fontSize(10)
-       .fillColor('#1f2937')
+       .fillColor(colors.text)
+       .font('Helvetica-Bold')
+       .text(request.requestNumber, leftCol, infoStartY + 12);
+
+    // Fecha de emisión
+    const emissionDate = request.completedAt || request.updatedAt || new Date();
+    doc.fontSize(9)
+       .fillColor(colors.secondary)
        .font('Helvetica')
-       .text(request.reason, 60, currentY + 55, {
-         width: doc.page.width - 120,
-         align: 'justify',
-         lineGap: 2
+       .text('Fecha de Emisión:', rightCol, infoStartY);
+    
+    doc.fontSize(10)
+       .fillColor(colors.text)
+       .font('Helvetica-Bold')
+       .text(new Date(emissionDate).toLocaleDateString('es-ES'), rightCol, infoStartY + 12);
+
+    // Fecha de solicitud
+    doc.fontSize(9)
+       .fillColor(colors.secondary)
+       .font('Helvetica')
+       .text('Fecha de Solicitud:', leftCol, infoStartY + 35);
+    
+    doc.fontSize(10)
+       .fillColor(colors.text)
+       .font('Helvetica')
+       .text(new Date(request.createdAt).toLocaleDateString('es-ES'), leftCol, infoStartY + 47);
+
+    // Estado
+    doc.fontSize(9)
+       .fillColor(colors.secondary)
+       .font('Helvetica')
+       .text('Estado:', rightCol, infoStartY + 35);
+    
+    doc.fontSize(10)
+       .fillColor(colors.success)
+       .font('Helvetica-Bold')
+       .text('EMITIDO', rightCol, infoStartY + 47);
+
+    return startY + sectionHeight + 15;
+  }
+
+  // === DATOS PERSONALES ===
+  static drawPersonalInfo(doc, request, margin, startY, contentWidth, colors) {
+    const sectionHeight = 120;
+    
+    // Título de sección
+    doc.fontSize(12)
+       .fillColor(colors.text)
+       .font('Helvetica-Bold')
+       .text('DATOS DEL SOLICITANTE', margin, startY);
+
+    startY += 20;
+
+    // Fondo de la sección
+    doc.rect(margin, startY, contentWidth, sectionHeight - 20)
+       .fillColor('#f9fafb')
+       .fill()
+       .strokeColor(colors.border)
+       .lineWidth(1)
+       .stroke();
+
+    const infoStartY = startY + 15;
+    const leftCol = margin + 20;
+    const rightCol = margin + (contentWidth / 2) + 20;
+
+    // Datos personales
+    const personalData = [
+      { label: 'Nombre Completo:', value: `${request.user.firstName} ${request.user.lastName}`, x: leftCol },
+      { label: 'Cédula de Identidad:', value: request.user.nationalId, x: rightCol },
+      { label: 'Correo Electrónico:', value: request.user.email, x: leftCol },
+      { label: 'Teléfono:', value: request.user.phone || 'No proporcionado', x: rightCol }
+    ];
+
+    personalData.forEach((item, index) => {
+      const yPos = infoStartY + (Math.floor(index / 2) * 40);
+      
+      doc.fontSize(9)
+         .fillColor(colors.secondary)
+         .font('Helvetica')
+         .text(item.label, item.x, yPos);
+      
+      doc.fontSize(10)
+         .fillColor(colors.text)
+         .font('Helvetica-Bold')
+         .text(item.value, item.x, yPos + 12, { width: 200 });
+    });
+
+    return startY + sectionHeight + 15;
+  }
+
+  // === DETALLES DE LA SOLICITUD ===
+  static drawRequestDetails(doc, request, margin, startY, contentWidth, colors) {
+    const sectionHeight = 100;
+    
+    // Título de sección
+    doc.fontSize(12)
+       .fillColor(colors.text)
+       .font('Helvetica-Bold')
+       .text('DETALLES DE LA SOLICITUD', margin, startY);
+
+    startY += 20;
+
+    // Motivo de la solicitud
+    doc.fontSize(9)
+       .fillColor(colors.secondary)
+       .font('Helvetica')
+       .text('Motivo de la solicitud:', margin, startY);
+
+    startY += 15;
+
+    // Fondo para el motivo
+    doc.rect(margin, startY, contentWidth, 50)
+       .fillColor('#fafafa')
+       .fill()
+       .strokeColor(colors.border)
+       .lineWidth(1)
+       .stroke();
+
+    doc.fontSize(10)
+       .fillColor(colors.text)
+       .font('Helvetica')
+       .text(request.reason, margin + 10, startY + 10, {
+         width: contentWidth - 20,
+         align: 'justify'
        });
 
-    // Tipo de procesamiento
-    const urgencyY = currentY + 115;
-    doc.fontSize(10)
-       .fillColor(secondaryColor)
+    startY += 65;
+
+    // Tipo de procesamiento y documento
+    const leftCol = margin;
+    const rightCol = margin + (contentWidth / 2);
+
+    doc.fontSize(9)
+       .fillColor(colors.secondary)
        .font('Helvetica')
-       .text('Tipo de procesamiento:', 50, urgencyY);
-    
-    const isUrgent = request.urgency === 'URGENTE';
-    const urgencyColor = isUrgent ? '#dc2626' : accentColor;
-    const urgencyText = isUrgent ? '⚡ PROCESAMIENTO URGENTE' : '📋 PROCESAMIENTO NORMAL';
-    
-    doc.fontSize(11)
+       .text('Tipo de procesamiento:', leftCol, startY);
+
+    const urgencyText = request.urgency === 'URGENTE' ? 'PROCESAMIENTO URGENTE' : 'PROCESAMIENTO NORMAL';
+    const urgencyColor = request.urgency === 'URGENTE' ? '#dc2626' : colors.success;
+
+    doc.fontSize(10)
        .fillColor(urgencyColor)
        .font('Helvetica-Bold')
-       .text(urgencyText, 200, urgencyY);
+       .text(urgencyText, leftCol, startY + 12);
 
     // Documento adjunto (si existe)
     if (request.document) {
-      doc.fontSize(10)
-         .fillColor(secondaryColor)
+      doc.fontSize(9)
+         .fillColor(colors.secondary)
          .font('Helvetica')
-         .text('Documento adjunto:', 50, urgencyY + 20);
+         .text('Documento adjunto:', rightCol, startY);
       
       doc.fontSize(10)
-         .fillColor('#1f2937')
+         .fillColor(colors.text)
          .font('Helvetica')
-         .text(`📎 ${request.document.originalName}`, 170, urgencyY + 20);
+         .text(request.document.originalName, rightCol, startY + 12, { width: 200 });
     }
+
+    return startY + 40;
   }
 
-  // Sección de validación mejorada
-  static addValidationSection(doc, request, primaryColor, secondaryColor) {
-    const currentY = 640;
+  // === VALIDACIÓN Y SEGURIDAD ===
+  static drawValidationSection(doc, request, margin, startY, contentWidth, colors) {
+    const sectionHeight = 80;
     
-    // Rectángulo de validación con estilo premium
-    doc.rect(50, currentY, doc.page.width - 100, 90)
+    // Fondo de validación
+    doc.rect(margin, startY, contentWidth, sectionHeight)
        .fillColor('#fef3c7')
        .fill()
        .strokeColor('#f59e0b')
        .lineWidth(2)
        .stroke();
 
-    // Icono de validación
-    doc.fontSize(20)
+    // Icono de seguridad
+    doc.fontSize(16)
        .fillColor('#f59e0b')
-       .text('🔐', 60, currentY + 15);
+       .text('🔐', margin + 15, startY + 15);
 
-    // Título de validación
+    // Título
     doc.fontSize(12)
        .fillColor('#92400e')
        .font('Helvetica-Bold')
-       .text('VALIDACIÓN OFICIAL Y SEGURIDAD', 90, currentY + 15);
+       .text('VALIDACIÓN OFICIAL Y SEGURIDAD', margin + 45, startY + 15);
 
-    // Textos de validación
-    doc.fontSize(9)
-       .fillColor('#78350f')
-       .font('Helvetica')
-       .text('Este certificado ha sido generado digitalmente por el Sistema DocuTrack del', 60, currentY + 35);
-    
-    doc.text('Ministerio de Gobierno de la República de Panamá, y cuenta con plena validez', 60, currentY + 48);
-    
-    doc.text('legal según las normativas vigentes. Su autenticidad puede ser verificada', 60, currentY + 61);
+    // Texto de validación
+    const validationText = [
+      'Este certificado ha sido generado digitalmente por el Sistema DocuTrack del',
+      'Ministerio de Gobierno de la República de Panamá, y cuenta con plena validez',
+      'legal según las normativas vigentes. Su autenticidad puede ser verificada.'
+    ];
+
+    validationText.forEach((line, index) => {
+      doc.fontSize(9)
+         .fillColor('#78350f')
+         .font('Helvetica')
+         .text(line, margin + 15, startY + 35 + (index * 10));
+    });
 
     // Código de verificación
     const verificationCode = this.generateVerificationCode(request);
     doc.fontSize(10)
        .fillColor('#92400e')
        .font('Helvetica-Bold')
-       .text(`Código de Verificación: ${verificationCode}`, 200, currentY + 75);
+       .text(`Código de Verificación: ${verificationCode}`, margin + 15, startY + 70);
+
+    return startY + sectionHeight + 20;
   }
 
-  // Sección QR de verificación
-  static addQRSection(doc, request, primaryColor) {
-    const qrY = 750;
+  // === FOOTER ===
+  static drawFooter(doc, request, margin, colors) {
+    const footerY = doc.page.height - 80;
     
-    // Simulación de QR con texto
-    doc.rect(doc.page.width - 120, qrY, 60, 60)
+    // Línea superior
+    doc.moveTo(margin, footerY)
+       .lineTo(doc.page.width - margin, footerY)
+       .strokeColor(colors.border)
+       .lineWidth(1)
+       .stroke();
+
+    // QR Code simulado
+    const qrSize = 50;
+    const qrX = doc.page.width - margin - qrSize - 10;
+    
+    doc.rect(qrX, footerY + 5, qrSize, qrSize)
        .fillColor('#ffffff')
        .fill()
-       .strokeColor(primaryColor)
+       .strokeColor(colors.primary)
        .lineWidth(1)
        .stroke();
     
     doc.fontSize(8)
-       .fillColor(primaryColor)
+       .fillColor(colors.primary)
        .font('Helvetica-Bold')
-       .text('QR CODE', doc.page.width - 110, qrY + 25, { width: 40, align: 'center' });
+       .text('QR', qrX + 18, footerY + 20);
     
     doc.fontSize(6)
-       .fillColor('#6b7280')
-       .font('Helvetica')
-       .text('Escanear para', doc.page.width - 115, qrY + 35, { width: 50, align: 'center' });
-    
-    doc.text('verificar', doc.page.width - 115, qrY + 42, { width: 50, align: 'center' });
-
-    // URL de verificación
-    doc.fontSize(8)
-       .fillColor('#6b7280')
-       .font('Helvetica')
-       .text('Verificar en:', 50, qrY + 10);
-    
-    doc.fontSize(8)
-       .fillColor(primaryColor)
-       .font('Helvetica')
-       .text('https://docutrack.gob.pa/verificar', 50, qrY + 25);
-  }
-
-  // Footer del documento mejorado
-  static addFooter(doc, request, secondaryColor) {
-    const footerY = doc.page.height - 60;
-    
-    // Línea superior decorativa
-    doc.moveTo(50, footerY - 10)
-       .lineTo(doc.page.width - 50, footerY - 10)
-       .strokeColor('#e5e7eb')
-       .lineWidth(1)
-       .stroke();
+       .fillColor(colors.secondary)
+       .text('Verificar', qrX + 12, footerY + 30);
 
     // Información del footer
-    doc.fontSize(7)
-       .fillColor(secondaryColor)
-       .font('Helvetica')
-       .text('Este documento fue generado automáticamente por el Sistema DocuTrack', 50, footerY, {
-         width: doc.page.width - 100,
-         align: 'center'
-       });
+    const footerTexts = [
+      'Este documento fue generado automáticamente por el Sistema DocuTrack',
+      'Ministerio de Gobierno - República de Panamá',
+      'Para verificar autenticidad: www.docutrack.gob.pa/verificar'
+    ];
 
-    doc.fontSize(7)
-       .text('Ministerio de Gobierno - República de Panamá', 50, footerY + 12, {
-         width: doc.page.width - 100,
-         align: 'center'
-       });
+    footerTexts.forEach((text, index) => {
+      doc.fontSize(7)
+         .fillColor(colors.secondary)
+         .font('Helvetica')
+         .text(text, margin, footerY + 10 + (index * 10), {
+           width: doc.page.width - margin - qrSize - 30,
+           align: 'center'
+         });
+    });
 
-    doc.fontSize(7)
-       .fillColor('#9ca3af')
-       .text('Para verificar autenticidad: www.docutrack.gob.pa/verificar', 50, footerY + 24, {
-         width: doc.page.width - 100,
-         align: 'center'
-       });
-
-    // Número de página y timestamp
+    // ID del documento
     doc.fontSize(6)
        .fillColor('#d1d5db')
-       .text('Página 1 de 1', 50, footerY + 40);
-    
-    doc.fontSize(6)
-       .text(`ID: ${request.id}`, doc.page.width - 150, footerY + 40);
+       .text(`ID: ${request.id}`, margin, footerY + 45);
   }
 
-  // Marca de agua de seguridad mejorada
-  static addWatermark(doc) {
-    // Guardar estado actual
+  // === MARCA DE AGUA ===
+  static drawWatermark(doc, colors) {
     doc.save();
     
-    // Configurar transparencia
-    doc.fillOpacity(0.08);
-    
-    // Agregar múltiples marcas de agua
-    doc.fontSize(50)
-       .fillColor('#2563eb')
+    doc.fillOpacity(0.05)
+       .fontSize(60)
+       .fillColor(colors.primary)
        .font('Helvetica-Bold');
     
-    // Marca de agua principal (diagonal)
+    // Rotar y centrar
     doc.rotate(-45, { origin: [doc.page.width / 2, doc.page.height / 2] });
-    doc.text('DOCUTRACK', doc.page.width / 2 - 120, doc.page.height / 2 - 25);
+    doc.text('DOCUTRACK', doc.page.width / 2 - 150, doc.page.height / 2 - 20);
     
-    // Restaurar y agregar marca secundaria
-    doc.restore();
-    doc.save();
-    doc.fillOpacity(0.05);
-    
-    // Marca de agua secundaria
-    doc.rotate(45, { origin: [doc.page.width / 4, doc.page.height * 3 / 4] });
-    doc.fontSize(30)
-       .text('OFICIAL', doc.page.width / 4 - 50, doc.page.height * 3 / 4 - 15);
-    
-    // Restaurar estado
     doc.restore();
   }
 
-  // Generar código de verificación único mejorado
+  // === CÓDIGO DE VERIFICACIÓN ===
   static generateVerificationCode(request) {
     const completedDate = request.completedAt || request.updatedAt || new Date();
     const timestamp = new Date(completedDate).getTime();
@@ -521,11 +478,10 @@ class PDFGenerator {
       .substring(0, 12)
       .toUpperCase();
     
-    // Formatear en grupos de 4
     return `${hash.substring(0, 4)}-${hash.substring(4, 8)}-${hash.substring(8, 12)}`;
   }
 
-  // Generar reporte de solicitudes para admin (mejorado)
+  // === REPORTE DE SOLICITUDES (ADMIN) ===
   static async generateRequestsReport(requests, filters = {}) {
     return new Promise((resolve, reject) => {
       try {
@@ -542,125 +498,104 @@ class PDFGenerator {
 
         const buffers = [];
         doc.on('data', buffers.push.bind(buffers));
-        doc.on('end', () => {
-          const pdfData = Buffer.concat(buffers);
-          resolve(pdfData);
-        });
+        doc.on('end', () => resolve(Buffer.concat(buffers)));
         doc.on('error', reject);
 
-        // Header del reporte
-        doc.fontSize(18)
-           .fillColor('#2563eb')
-           .font('Helvetica-Bold')
-           .text('📊 REPORTE DE SOLICITUDES', 30, 30);
+        let currentY = 30;
+        const margin = 30;
+        const contentWidth = doc.page.width - (margin * 2);
 
-        doc.fontSize(12)
+        // Header del reporte
+        doc.fontSize(16)
+           .fillColor('#1e40af')
+           .font('Helvetica-Bold')
+           .text('REPORTE DE SOLICITUDES - DOCUTRACK', margin, currentY);
+
+        currentY += 30;
+
+        doc.fontSize(10)
            .fillColor('#64748b')
            .font('Helvetica')
-           .text(`Generado: ${new Date().toLocaleString('es-ES')}`, 30, 55);
+           .text(`Generado: ${new Date().toLocaleString('es-ES')}`, margin, currentY);
 
-        // Estadísticas rápidas
-        const stats = this.calculateReportStats(requests);
-        let currentY = 80;
+        currentY += 30;
 
+        // Estadísticas
+        const stats = this.calculateStats(requests);
+        const statsText = `Total: ${stats.total} | Emitidos: ${stats.emitidos} | Pendientes: ${stats.pendientes}`;
+        
         doc.fontSize(10)
            .fillColor('#1f2937')
            .font('Helvetica-Bold')
-           .text(`Total: ${stats.total} | Emitidos: ${stats.emitidos} | Pendientes: ${stats.pendientes}`, 30, currentY);
+           .text(statsText, margin, currentY);
 
-        currentY += 25;
-
-        // Filtros aplicados
-        if (Object.keys(filters).length > 0) {
-          doc.fontSize(10)
-             .fillColor('#6b7280')
-             .font('Helvetica')
-             .text('Filtros aplicados:', 30, currentY);
-          
-          currentY += 15;
-          Object.entries(filters).forEach(([key, value]) => {
-            if (value) {
-              doc.fontSize(9).text(`• ${key}: ${value}`, 40, currentY);
-              currentY += 12;
-            }
-          });
-          currentY += 10;
-        }
+        currentY += 40;
 
         // Headers de tabla
-        doc.fontSize(8)
-           .fillColor('#1f2937')
-           .font('Helvetica-Bold');
-        
         const headers = [
-          { text: 'N° Solicitud', x: 30, width: 80 },
-          { text: 'Usuario', x: 110, width: 80 },
-          { text: 'Tipo', x: 190, width: 60 },
-          { text: 'Estado', x: 250, width: 50 },
-          { text: 'Fecha', x: 300, width: 60 },
-          { text: 'Urgencia', x: 360, width: 50 }
+          { text: 'Número', x: margin, width: 100 },
+          { text: 'Usuario', x: margin + 100, width: 120 },
+          { text: 'Tipo', x: margin + 220, width: 80 },
+          { text: 'Estado', x: margin + 300, width: 60 },
+          { text: 'Fecha', x: margin + 360, width: 80 }
         ];
 
-        headers.forEach(header => {
-          doc.text(header.text, header.x, currentY, { width: header.width });
-        });
-
-        currentY += 15;
-
-        // Línea separadora
-        doc.moveTo(30, currentY)
-           .lineTo(450, currentY)
+        // Línea de header
+        doc.rect(margin, currentY, contentWidth, 20)
+           .fillColor('#f8fafc')
+           .fill()
            .strokeColor('#e2e8f0')
            .lineWidth(1)
            .stroke();
 
-        currentY += 10;
+        headers.forEach(header => {
+          doc.fontSize(9)
+             .fillColor('#1f2937')
+             .font('Helvetica-Bold')
+             .text(header.text, header.x + 5, currentY + 6);
+        });
 
-        // Datos de solicitudes
-        doc.font('Helvetica').fontSize(7);
-        
-        requests.forEach((request, index) => {
-          if (currentY > 750) { // Nueva página
+        currentY += 25;
+
+        // Datos
+        requests.slice(0, 25).forEach((request, index) => {
+          if (currentY > 750) {
             doc.addPage();
             currentY = 50;
           }
 
-          const rowColor = index % 2 === 0 ? '#000000' : '#374151';
-          doc.fillColor(rowColor);
+          const bgColor = index % 2 === 0 ? '#ffffff' : '#f9fafb';
           
+          doc.rect(margin, currentY, contentWidth, 18)
+             .fillColor(bgColor)
+             .fill();
+
           const data = [
-            { text: request.requestNumber.substring(0, 12), x: 30, width: 80 },
-            { text: `${request.user.firstName} ${request.user.lastName}`.substring(0, 15), x: 110, width: 80 },
-            { text: request.certificateType.substring(0, 8), x: 190, width: 60 },
-            { text: request.status, x: 250, width: 50 },
-            { text: new Date(request.createdAt).toLocaleDateString('es-ES'), x: 300, width: 60 },
-            { text: request.urgency === 'URGENTE' ? '⚡' : '📋', x: 360, width: 50 }
+            { text: request.requestNumber.substring(0, 18), x: margin + 5 },
+            { text: `${request.user?.firstName || request.firstName} ${request.user?.lastName || request.lastName}`.substring(0, 20), x: margin + 105 },
+            { text: request.certificateType.substring(0, 12), x: margin + 225 },
+            { text: request.status, x: margin + 305 },
+            { text: new Date(request.createdAt).toLocaleDateString('es-ES'), x: margin + 365 }
           ];
 
           data.forEach(item => {
-            doc.text(item.text, item.x, currentY, { width: item.width });
+            doc.fontSize(8)
+               .fillColor('#374151')
+               .font('Helvetica')
+               .text(item.text, item.x, currentY + 5);
           });
 
-          currentY += 12;
+          currentY += 18;
         });
 
-        // Resumen final
-        currentY += 20;
-        doc.fontSize(10)
-           .fillColor('#2563eb')
-           .font('Helvetica-Bold')
-           .text('RESUMEN ESTADÍSTICO', 30, currentY);
-
-        currentY += 15;
-        doc.fontSize(9)
-           .fillColor('#1f2937')
-           .font('Helvetica')
-           .text(`Total de solicitudes procesadas: ${requests.length}`, 30, currentY);
-
-        Object.entries(stats.byStatus).forEach(([status, count]) => {
-          currentY += 12;
-          doc.text(`• ${status}: ${count} solicitudes`, 40, currentY);
-        });
+        // Nota si hay más registros
+        if (requests.length > 25) {
+          currentY += 20;
+          doc.fontSize(8)
+             .fillColor('#6b7280')
+             .font('Helvetica-Oblique')
+             .text(`Mostrando primeros 25 de ${requests.length} registros`, margin, currentY);
+        }
 
         doc.end();
 
@@ -670,32 +605,17 @@ class PDFGenerator {
     });
   }
 
-  // Calcular estadísticas para reporte
-  static calculateReportStats(requests) {
-    const stats = {
+  // === CALCULAR ESTADÍSTICAS ===
+  static calculateStats(requests) {
+    return {
       total: requests.length,
-      emitidos: 0,
-      pendientes: 0,
-      byStatus: {}
+      emitidos: requests.filter(r => r.status === 'EMITIDO').length,
+      pendientes: requests.filter(r => ['RECIBIDO', 'EN_VALIDACION', 'OBSERVADO', 'APROBADO'].includes(r.status)).length
     };
-
-    requests.forEach(request => {
-      // Contar por estado
-      stats.byStatus[request.status] = (stats.byStatus[request.status] || 0) + 1;
-      
-      // Contar emitidos y pendientes
-      if (request.status === 'EMITIDO') {
-        stats.emitidos++;
-      } else if (['RECIBIDO', 'EN_VALIDACION', 'OBSERVADO', 'APROBADO'].includes(request.status)) {
-        stats.pendientes++;
-      }
-    });
-
-    return stats;
   }
 }
 
 module.exports = {
-  generateCertificatePDF: PDFGenerator.generateCertificatePDF.bind(PDFGenerator),
-  generateRequestsReport: PDFGenerator.generateRequestsReport.bind(PDFGenerator)
+  generateCertificatePDF: ModernPDFGenerator.generateCertificatePDF.bind(ModernPDFGenerator),
+  generateRequestsReport: ModernPDFGenerator.generateRequestsReport.bind(ModernPDFGenerator)
 };

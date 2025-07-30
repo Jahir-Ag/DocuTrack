@@ -10,11 +10,10 @@ export const useDownload = () => {
       setDownloading(true);
       setError(null);
       
-      // Llamar al servicio para descargar el certificado
-      const response = await certificateService.downloadCertificate(requestId);
+      // ✅ CORREGIDO: certificateService ya devuelve un Blob
+      const blob = await certificateService.downloadCertificate(requestId);
       
-      // Crear blob y descargar archivo
-      const blob = new Blob([response.data], { type: 'application/pdf' });
+      // ✅ CORREGIDO: Usar el blob directamente, no response.data
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -24,7 +23,7 @@ export const useDownload = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       
-      return response;
+      return { success: true };
     } catch (error) {
       console.error('Error downloading certificate:', error);
       setError(error.message || 'Error al descargar el certificado');
@@ -39,11 +38,9 @@ export const useDownload = () => {
       setDownloading(true);
       setError(null);
       
-      // Llamar al servicio para descargar un documento adjunto
-      const response = await certificateService.downloadDocument(filename);
+      // ✅ CORREGIDO: Si downloadDocument también devuelve blob directamente
+      const blob = await certificateService.downloadDocument(filename);
       
-      // Crear blob y descargar archivo
-      const blob = new Blob([response.data]);
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -53,7 +50,7 @@ export const useDownload = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       
-      return response;
+      return { success: true };
     } catch (error) {
       console.error('Error downloading document:', error);
       setError(error.message || 'Error al descargar el documento');
@@ -67,7 +64,6 @@ export const useDownload = () => {
     try {
       setError(null);
       
-      // Abrir el documento en una nueva ventana
       const url = `/api/documents/${filename}`;
       window.open(url, '_blank');
       

@@ -358,9 +358,11 @@ router.get('/:id', requireUser, async (req, res) => {
   }
 });
 
-// GET /api/requests/:id/download - Descargar certificado
+
 router.get('/:id/download', requireUser, async (req, res) => {
   try {
+    console.log('🔍 Iniciando descarga de certificado para ID:', req.params.id);
+    
     const request = await prisma.certificateRequest.findFirst({
       where: {
         id: req.params.id,
@@ -376,25 +378,39 @@ router.get('/:id/download', requireUser, async (req, res) => {
             email: true,
             phone: true
           }
-        }
+        },
+        document: true
       }
     });
 
     if (!request) {
+      console.log('❌ Solicitud no encontrada');
       return res.status(404).json({ 
         error: 'Solicitud no encontrada o certificado no disponible' 
       });
     }
 
+    console.log('✅ Solicitud encontrada:', {
+      id: request.id,
+      status: request.status,
+      user: request.user,
+      hasDocument: !!request.document
+    });
+
+    console.log('🔍 Generando PDF...');
     const pdfBuffer = await generateCertificatePDF(request);
+    console.log('✅ PDF generado, tamaño:', pdfBuffer.length, 'bytes');
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="certificado-${request.requestNumber}.pdf"`);
     res.send(pdfBuffer);
+    
+    console.log('✅ PDF enviado al cliente');
 
   } catch (error) {
-    console.error('Error descargando certificado:', error);
-    res.status(500).json({ error: 'Error generando certificado' });
+    console.error('❌ Error completo descargando certificado:', error);
+    console.error('❌ Stack trace:', error.stack);
+    res.status(500).json({ error: 'Error generando certificado: ' + error.message });
   }
 });
 
