@@ -31,9 +31,10 @@ const devOrigins = [
 
 // Orígenes de producción
 const prodOrigins = [
-  'https://docu-track-beta.vercel.app',  // Tu dominio principal de Vercel (permanente)
-  process.env.APP_URL,                   // Variable de entorno adicional si la tienes
-  process.env.FRONTEND_URL,              // La que agregaste en Railway
+  'https://docu-track-beta.vercel.app',
+  'https://docutrack-production.up.railway.app', 
+  process.env.APP_URL,
+  process.env.FRONTEND_URL,
 ].filter(Boolean); // Elimina valores undefined/null
 
 // En producción usa prodOrigins, en desarrollo usa devOrigins
@@ -142,10 +143,10 @@ app.use('*', (req, res) => {
 });
 
 // Iniciar servidor
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Servidor DocuTrack corriendo en puerto ${PORT}`);
   console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 API base: http://localhost:${PORT}/api`);
-  console.log(`📈 Health:   http://localhost:${PORT}/api/health`);
+  console.log(`🔗 API base: http://0.0.0.0:${PORT}/api`);
+  console.log(`📈 Health:   http://0.0.0.0:${PORT}/api/health`);
   console.log(`🌐 CORS Origins:`, allowedOrigins);
 });
