@@ -149,10 +149,14 @@ const authenticateToken = auth;
 // ✅ AGREGADO: Alias requireUser que es lo que necesita requestRoutes.js
 const requireUser = auth;
 
+// ✅ SOLUCION: Crear requireAdmin usando requireRole
+const requireAdmin = requireRole(['ADMIN']);
+
 module.exports = {
   auth,
   authenticateToken,
   requireRole,
   optionalAuth,
-  requireUser  // ✅ AGREGADO: Ahora exporta requireUser
+  requireUser,
+  requireAdmin  // ✅ AGREGADO: Ahora exporta requireAdmin
 };
