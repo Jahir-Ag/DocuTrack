@@ -2,10 +2,11 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const morgan = require('morgan');
 const path = require('path');
 require('dotenv').config();
 
-// Inicializaciones propias (DB, jobs, etc.)
+// Inicializaciones propias (DB, jobs, etc.) - SIN servidor
 require('./src/index');
 
 // Importar rutas
@@ -16,51 +17,24 @@ const adminRoutes = require('./src/routes/adminRoutes');
 const pdfRoutes = require('./src/routes/pdfRoutes');
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
 // Seguridad
 app.use(helmet());
 
-// CORS (permitir Vite y opciones comunes de dev)
-const devOrigins = [
-  'http://localhost:5173',
-  'http://127.0.0.1:5173',
-  'http://localhost:3000',
-  'http://127.0.0.1:3000',
-];
+// Morgan para logs
+app.use(morgan('combined'));
 
-// Orígenes de producción
-const prodOrigins = [
+// CORS simplificado y limpio
+const allowedOrigins = [
   'https://docu-track-beta.vercel.app',
-  'https://docutrack-production.up.railway.app', 
-  process.env.APP_URL,
-  process.env.FRONTEND_URL,
-].filter(Boolean); // Elimina valores undefined/null
-
-// En producción usa prodOrigins, en desarrollo usa devOrigins
-const allowedOrigins = process.env.NODE_ENV === 'production' 
-  ? prodOrigins 
-  : devOrigins;
+  'https://docutrack-production.up.railway.app'
+];
 
 console.log('🔗 CORS configurado para:', allowedOrigins);
 
 app.use(cors({
-  origin: function (origin, callback) {
-    // Permitir requests sin origin (como Postman)
-    if (!origin) return callback(null, true);
-    
-    // En desarrollo, usar la lista de allowedOrigins
-    if (process.env.NODE_ENV !== 'production') {
-      return callback(null, allowedOrigins.includes(origin));
-    }
-    
-    // En producción, permitir dominios específicos y cualquier subdominio de Vercel
-    const isAllowed = allowedOrigins.includes(origin) || 
-                     origin.endsWith('.vercel.app') ||
-                     origin.endsWith('.railway.app');
-    
-    callback(null, isAllowed);
-  },
+  origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -97,7 +71,16 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
     version: '1.0.0',
-    corsOrigins: allowedOrigins, // Para debug
+    corsOrigins: allowedOrigins,
+  });
+});
+
+// Ruta raíz
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'DocuTrack API funcionando correctamente',
+    version: '1.0.0',
+    docs: '/api/health'
   });
 });
 
@@ -142,15 +125,7 @@ app.use('*', (req, res) => {
   });
 });
 
-// Iniciar servidor
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Servidor DocuTrack corriendo en puerto ${PORT}`);
-  console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 API base: http://0.0.0.0:${PORT}/api`);
-  console.log(`📈 Health:   http://0.0.0.0:${PORT}/api/health`);
-  console.log(`🌐 CORS Origins:`, allowedOrigins);
-});
-
+// Manejo de cierre graceful
 process.on('SIGTERM', () => {
   console.log('🔄 SIGTERM recibido, cerrando servidor...');
   server.close(() => {
@@ -165,4 +140,21 @@ process.on('SIGINT', () => {
     console.log('✅ Servidor cerrado correctamente');
     process.exit(0);
   });
+});
+
+// Iniciar servidor
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 Servidor DocuTrack corriendo en puerto ${PORT}`);
+  console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔗 API base: http://0.0.0.0:${PORT}/api`);
+  console.log(`📈 Health:   http://0.0.0.0:${PORT}/api/health`);
+  console.log(`🌐 CORS Origins:`, allowedOrigins);
+});
+
+server.on('error', (err) => {
+  console.error('❌ Error al iniciar servidor:', err);
+  if (err.code === 'EADDRINUSE') {
+    console.error(`❌ Puerto ${PORT} ya está en uso. Cerrando proceso...`);
+    process.exit(1);
+  }
 });

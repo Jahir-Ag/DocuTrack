@@ -4,4 +4,6 @@ builder = "nixpacks"
 [deploy]
 startCommand = "npm start"
 restartPolicyType = "never"
+
+[service]
 replicas = 1
