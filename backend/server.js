@@ -31,7 +31,7 @@ const devOrigins = [
 
 // Orígenes de producción
 const prodOrigins = [
-  'https://docu-track-beta.vercel.app',  // Tu dominio de Vercel
+  'https://docu-track-beta.vercel.app',  // Tu dominio principal de Vercel (permanente)
   process.env.APP_URL,                   // Variable de entorno adicional si la tienes
   process.env.FRONTEND_URL,              // La que agregaste en Railway
 ].filter(Boolean); // Elimina valores undefined/null
@@ -44,7 +44,22 @@ const allowedOrigins = process.env.NODE_ENV === 'production'
 console.log('🔗 CORS configurado para:', allowedOrigins);
 
 app.use(cors({
-  origin: allowedOrigins,
+  origin: function (origin, callback) {
+    // Permitir requests sin origin (como Postman)
+    if (!origin) return callback(null, true);
+    
+    // En desarrollo, usar la lista de allowedOrigins
+    if (process.env.NODE_ENV !== 'production') {
+      return callback(null, allowedOrigins.includes(origin));
+    }
+    
+    // En producción, permitir dominios específicos y cualquier subdominio de Vercel
+    const isAllowed = allowedOrigins.includes(origin) || 
+                     origin.endsWith('.vercel.app') ||
+                     origin.endsWith('.railway.app');
+    
+    callback(null, isAllowed);
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
