@@ -122,7 +122,7 @@ Los certificados emitidos se generan como archivos PDF personalizados con los da
 
 ## 🤝 Autor
 
-- [Tu Nombre](https://github.com/tuusuario)
+- [Jahir Agudo](https://github.com/Jahir-Ag)
 - Desarrollador Full Stack
 
 ---
