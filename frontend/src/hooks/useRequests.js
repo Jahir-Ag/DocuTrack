@@ -24,21 +24,21 @@ export const useRequests = (initialFilters = {}) => {
         pagination.limit, 
         { ...filters, ...newFilters }
       );
-      
-      setRequests(response.data.requests || response.data);
-      setPagination(response.data.pagination || {
-        page,
-        limit: pagination.limit,
-        total: response.data.length || 0,
-        pages: 1
-      });
-    } catch (err) {
-      setError(err.message);
-      setRequests([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, pagination.limit]); // Solo estas dependencias
+    
+    setRequests(response.requests || []);
+    setPagination(response.pagination || {
+      page,
+      limit: pagination.limit,
+      total: response.requests?.length || 0,
+      pages: 1
+    });
+  } catch (err) {
+    setError(err.message);
+    setRequests([]);
+  } finally {
+    setLoading(false);
+  }
+}, [filters, pagination.limit]); // Solo estas dependencias
 
   // Crear nueva solicitud
   const createRequest = async (formData) => {

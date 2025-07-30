@@ -22,10 +22,10 @@ const loginValidation = [
   body('password').notEmpty().withMessage('Contraseña requerida')
 ];
 
-// Generar JWT
+// ✅ CORREGIDO: Generar JWT con estructura consistente
 const generateToken = (userId, role) => {
   return jwt.sign(
-    { userId, role },
+    { userId, role }, // ✅ Usar userId (no id) para consistencia con middleware
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
   );
@@ -77,7 +77,7 @@ router.post('/register', registerValidation, async (req, res) => {
         lastName,
         phone,
         nationalId,
-        role: 'USER' // Por defecto todos son usuarios
+        role: 'USER'
       },
       select: {
         id: true,
@@ -107,16 +107,20 @@ router.post('/register', registerValidation, async (req, res) => {
     console.error('Error en registro:', error);
     res.status(500).json({ 
       success: false,
-      message: 'Error interno del servidor' 
+      message: 'Error interno del servidor',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
 
-// POST /api/auth/login - Inicio de sesión
+// ✅ CORREGIDO: POST /api/auth/login - Inicio de sesión
 router.post('/login', loginValidation, async (req, res) => {
   try {
+    console.log('📧 Intentando login con:', { email: req.body.email });
+
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('❌ Errores de validación:', errors.array());
       return res.status(400).json({ 
         success: false,
         message: 'Datos inválidos', 
@@ -127,39 +131,60 @@ router.post('/login', loginValidation, async (req, res) => {
     const { email, password } = req.body;
 
     // Buscar usuario
+    console.log('🔍 Buscando usuario en BD...');
     const user = await prisma.user.findUnique({
       where: { email }
     });
 
     if (!user) {
+      console.log('❌ Usuario no encontrado');
       return res.status(401).json({ 
         success: false,
         message: 'Credenciales inválidas' 
+      });
+    }
+
+    console.log('✅ Usuario encontrado:', { id: user.id, email: user.email, isActive: user.isActive });
+
+    // ✅ AGREGADO: Verificar si está activo
+    if (!user.isActive) {
+      console.log('❌ Usuario inactivo');
+      return res.status(401).json({ 
+        success: false,
+        message: 'Cuenta desactivada. Contacta al administrador.' 
       });
     }
 
     // Verificar contraseña
+    console.log('🔑 Verificando contraseña...');
     const isValidPassword = await bcrypt.compare(password, user.password);
     if (!isValidPassword) {
+      console.log('❌ Contraseña incorrecta');
       return res.status(401).json({ 
         success: false,
         message: 'Credenciales inválidas' 
       });
     }
 
+    console.log('✅ Contraseña correcta');
+
     // Generar token
     const token = generateToken(user.id, user.role);
+    console.log('🎫 Token generado exitosamente');
 
-    // Actualizar último login (opcional - solo si tienes el campo en tu modelo)
+    // ✅ CORREGIDO: Actualizar último login de forma segura
     try {
       await prisma.user.update({
         where: { id: user.id },
         data: { lastLogin: new Date() }
       });
-    } catch (error) {
-      // Si no existe el campo lastLogin, simplemente continúa
-      console.warn('Campo lastLogin no existe en el modelo User');
+      console.log('📅 LastLogin actualizado');
+    } catch (updateError) {
+      console.warn('⚠️ No se pudo actualizar lastLogin:', updateError.message);
+      // Continúa sin fallar
     }
+
+    console.log('🎉 Login exitoso para:', user.email);
 
     res.json({
       success: true,
@@ -177,15 +202,16 @@ router.post('/login', loginValidation, async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Error en login:', error);
+    console.error('💥 Error en login:', error);
     res.status(500).json({ 
       success: false,
-      message: 'Error interno del servidor' 
+      message: 'Error interno del servidor',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });
 
-// POST /api/auth/verify - Verificar token
+// ✅ CORREGIDO: POST /api/auth/verify - Verificar token
 router.post('/verify', async (req, res) => {
   try {
     const authHeader = req.headers['authorization'];
@@ -199,6 +225,8 @@ router.post('/verify', async (req, res) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // ✅ CORREGIDO: Usar decoded.userId (consistente con generateToken)
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
       select: {
@@ -208,11 +236,12 @@ router.post('/verify', async (req, res) => {
         lastName: true,
         nationalId: true,
         phone: true,
-        role: true
+        role: true,
+        isActive: true
       }
     });
 
-    if (!user) {
+    if (!user || !user.isActive) {
       return res.status(401).json({ 
         success: false,
         message: 'Usuario no válido' 
@@ -228,6 +257,7 @@ router.post('/verify', async (req, res) => {
     });
 
   } catch (error) {
+    console.error('Error verificando token:', error);
     res.status(401).json({ 
       success: false,
       valid: false, 
@@ -236,9 +266,8 @@ router.post('/verify', async (req, res) => {
   }
 });
 
-// POST /api/auth/logout - Cerrar sesión (opcional - para invalidar token del lado del cliente)
+// POST /api/auth/logout - Cerrar sesión
 router.post('/logout', (req, res) => {
-  // En JWT stateless, el logout se maneja del lado del cliente eliminando el token
   res.json({
     success: true,
     message: 'Sesión cerrada exitosamente'

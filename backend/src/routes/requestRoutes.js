@@ -47,12 +47,12 @@ const requestValidation = [
   
   body('address')
     .trim()
-    .isLength({ min: 10, max: 200 })
+    .isLength({ min: 5, max: 200 })
     .withMessage('La dirección debe tener entre 10 y 200 caracteres'),
   
   body('reason')
     .trim()
-    .isLength({ min: 10, max: 500 })
+    .isLength({ min: 5, max: 500 })
     .withMessage('La razón debe tener entre 10 y 500 caracteres'),
   
   body('additionalInfo')

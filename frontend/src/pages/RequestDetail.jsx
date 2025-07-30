@@ -24,38 +24,40 @@ const RequestDetail = () => {
   }, [id]);
 
   const fetchRequestDetail = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const response = await requestService.getRequestById(id);
-      setRequest(response.data);
-      
-      // Simular historial de estados (en un caso real vendría del backend)
-      const mockHistory = [
-        {
-          status: 'RECIBIDO',
-          date: response.data.createdAt,
-          comment: 'Solicitud recibida correctamente'
-        }
-      ];
-      
-      if (response.data.status !== 'RECIBIDO') {
-        mockHistory.push({
-          status: response.data.status,
-          date: response.data.updatedAt,
-          comment: 'Estado actualizado por el administrador'
-        });
+  try {
+    setLoading(true);
+    setError(null);
+    
+    const response = await requestService.getRequestById(id);
+    
+    // ✅ CORRECCIÓN: response ya es { request: {...} }
+    setRequest(response.request);
+    
+    // Simular historial de estados
+    const mockHistory = [
+      {
+        status: 'RECIBIDO',
+        date: response.request.createdAt,  // ✅ CORRECCIÓN: response.request
+        comment: 'Solicitud recibida correctamente'
       }
-      
-      setStatusHistory(mockHistory);
-    } catch (error) {
-      console.error('Error fetching request detail:', error);
-      setError('Error al cargar los detalles de la solicitud');
-    } finally {
-      setLoading(false);
+    ];
+    
+    if (response.request.status !== 'RECIBIDO') {  // ✅ CORRECCIÓN: response.request
+      mockHistory.push({
+        status: response.request.status,           // ✅ CORRECCIÓN: response.request
+        date: response.request.updatedAt,          // ✅ CORRECCIÓN: response.request
+        comment: 'Estado actualizado por el administrador'
+      });
     }
-  };
+    
+    setStatusHistory(mockHistory);
+  } catch (error) {
+    console.error('Error fetching request detail:', error);
+    setError('Error al cargar los detalles de la solicitud');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleDownloadCertificate = async () => {
     try {
