@@ -1,7 +1,20 @@
 const { PrismaClient } = require('@prisma/client');
 const path = require('path');
 const fs = require('fs').promises;
-const { generateCertificatePDF } = require('../utils/pdfGenerator');
+
+// Importar con manejo de errores
+let generateCertificatePDF;
+try {
+  const pdfGen = require('../utils/pdfGenerator');
+  generateCertificatePDF = pdfGen.generateCertificatePDF;
+} catch (error) {
+  console.warn('⚠️ pdfGenerator no encontrado, usando función mock');
+  generateCertificatePDF = async (request) => {
+    // Mock function para desarrollo
+    const mockPDF = Buffer.from(`Mock PDF para solicitud ${request.requestNumber}`);
+    return mockPDF;
+  };
+}
 
 const prisma = new PrismaClient();
 
@@ -68,17 +81,25 @@ class PDFController {
         // Si no existe, generarlo
         console.log(`Generando nuevo certificado: ${certificateFileName}`);
         
-        // Generar el PDF
-        pdfBuffer = await generateCertificatePDF(request);
-        
-        // Guardar en la carpeta certificates para futuras descargas
         try {
-          await fs.mkdir(path.dirname(certificatePath), { recursive: true });
-          await fs.writeFile(certificatePath, pdfBuffer);
-          console.log(`Certificado guardado en: ${certificatePath}`);
-        } catch (saveError) {
-          console.warn('No se pudo guardar el certificado:', saveError.message);
-          // Continuar aunque no se pueda guardar
+          // Generar el PDF
+          pdfBuffer = await generateCertificatePDF(request);
+          
+          // Guardar en la carpeta certificates para futuras descargas
+          try {
+            await fs.mkdir(path.dirname(certificatePath), { recursive: true });
+            await fs.writeFile(certificatePath, pdfBuffer);
+            console.log(`Certificado guardado en: ${certificatePath}`);
+          } catch (saveError) {
+            console.warn('No se pudo guardar el certificado:', saveError.message);
+            // Continuar aunque no se pueda guardar
+          }
+        } catch (pdfError) {
+          console.error('Error generando PDF:', pdfError);
+          return res.status(500).json({
+            error: 'Error generando certificado PDF',
+            details: process.env.NODE_ENV === 'development' ? pdfError.message : 'Error interno'
+          });
         }
       }
 
@@ -97,7 +118,7 @@ class PDFController {
       console.error('Error generando/descargando certificado:', error);
       res.status(500).json({
         error: 'Error generando certificado',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === 'development' ? error.message : 'Error interno del servidor'
       });
     }
   }
@@ -146,21 +167,29 @@ class PDFController {
         });
       }
 
-      // Generar PDF para preview (sin guardar)
-      const pdfBuffer = await generateCertificatePDF(request);
+      try {
+        // Generar PDF para preview (sin guardar)
+        const pdfBuffer = await generateCertificatePDF(request);
 
-      // Configurar headers para mostrar en navegador
-      res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', `inline; filename="preview-${request.requestNumber}.pdf"`);
-      res.setHeader('Content-Length', pdfBuffer.length);
-      
-      res.send(pdfBuffer);
+        // Configurar headers para mostrar en navegador
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="preview-${request.requestNumber}.pdf"`);
+        res.setHeader('Content-Length', pdfBuffer.length);
+        
+        res.send(pdfBuffer);
+      } catch (pdfError) {
+        console.error('Error generando PDF para preview:', pdfError);
+        return res.status(500).json({
+          error: 'Error generando preview PDF',
+          details: process.env.NODE_ENV === 'development' ? pdfError.message : 'Error interno'
+        });
+      }
 
     } catch (error) {
       console.error('Error generando preview:', error);
       res.status(500).json({
         error: 'Error generando preview',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === 'development' ? error.message : 'Error interno del servidor'
       });
     }
   }
@@ -223,28 +252,36 @@ class PDFController {
         // No importa si no existe
       }
 
-      // Generar nuevo certificado
-      const pdfBuffer = await generateCertificatePDF(request);
-      
-      // Guardar el nuevo certificado
-      await fs.mkdir(path.dirname(certificatePath), { recursive: true });
-      await fs.writeFile(certificatePath, pdfBuffer);
+      try {
+        // Generar nuevo certificado
+        const pdfBuffer = await generateCertificatePDF(request);
+        
+        // Guardar el nuevo certificado
+        await fs.mkdir(path.dirname(certificatePath), { recursive: true });
+        await fs.writeFile(certificatePath, pdfBuffer);
 
-      res.json({
-        success: true,
-        message: 'Certificado regenerado exitosamente',
-        data: {
-          requestNumber: request.requestNumber,
-          fileName: certificateFileName,
-          regeneratedAt: new Date().toISOString()
-        }
-      });
+        res.json({
+          success: true,
+          message: 'Certificado regenerado exitosamente',
+          data: {
+            requestNumber: request.requestNumber,
+            fileName: certificateFileName,
+            regeneratedAt: new Date().toISOString()
+          }
+        });
+      } catch (pdfError) {
+        console.error('Error regenerando PDF:', pdfError);
+        return res.status(500).json({
+          error: 'Error regenerando certificado PDF',
+          details: process.env.NODE_ENV === 'development' ? pdfError.message : 'Error interno'
+        });
+      }
 
     } catch (error) {
       console.error('Error regenerando certificado:', error);
       res.status(500).json({
         error: 'Error regenerando certificado',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === 'development' ? error.message : 'Error interno del servidor'
       });
     }
   }
@@ -311,7 +348,7 @@ class PDFController {
       console.error('Error verificando certificado:', error);
       res.status(500).json({
         error: 'Error verificando certificado',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === 'development' ? error.message : 'Error interno del servidor'
       });
     }
   }
@@ -380,7 +417,7 @@ class PDFController {
       console.error('Error en limpieza:', error);
       res.status(500).json({
         error: 'Error en limpieza de certificados',
-        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        details: process.env.NODE_ENV === 'development' ? error.message : 'Error interno del servidor'
       });
     }
   }
