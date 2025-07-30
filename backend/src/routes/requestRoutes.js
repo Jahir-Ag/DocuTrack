@@ -67,6 +67,87 @@ const requestValidation = [
     .withMessage('Urgencia inválida')
 ];
 
+// ✅ IMPORTANTE: GET /api/requests/all DEBE IR PRIMERO (antes que /:id)
+// GET /api/requests/all - Obtener TODAS las solicitudes (solo admin)
+router.get('/all', requireUser, async (req, res) => {
+  try {
+    console.log('🔍 Admin solicitando todas las solicitudes...');
+    console.log('Usuario:', req.user);
+    
+    // Verificar que sea admin
+    if (req.user.role !== 'ADMIN') {
+      return res.status(403).json({ error: 'Acceso denegado. Se requieren permisos de administrador.' });
+    }
+
+    const { page = 1, limit = 50, status, certificateType, search } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const where = {
+      ...(status && { status }),
+      ...(certificateType && { certificateType }),
+      ...(search && {
+        OR: [
+          { requestNumber: { contains: search, mode: 'insensitive' } },
+          { firstName: { contains: search, mode: 'insensitive' } },
+          { lastName: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: 'insensitive' } }
+        ]
+      })
+    };
+
+    const [requests, total] = await Promise.all([
+      prisma.certificateRequest.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: parseInt(limit),
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true
+            }
+          },
+          document: {
+            select: {
+              id: true,
+              fileName: true,
+              originalName: true,
+              fileSize: true,
+              uploadedAt: true
+            }
+          },
+          _count: {
+            select: {
+              statusHistory: true
+            }
+          }
+        }
+      }),
+      prisma.certificateRequest.count({ where })
+    ]);
+
+    console.log('✅ Solicitudes encontradas:', requests.length);
+
+    res.json({
+      requests,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error obteniendo todas las solicitudes:', error);
+    res.status(500).json({ error: 'Error interno del servidor' });
+  }
+});
+
 // GET /api/requests - Obtener solicitudes del usuario
 router.get('/', requireUser, async (req, res) => {
   try {
@@ -240,7 +321,6 @@ router.post('/', requireUser, uploadDocument, requestValidation, async (req, res
   }
 });
 
-// ... resto de las rutas sin cambios
 // GET /api/requests/:id - Obtener solicitud específica
 router.get('/:id', requireUser, async (req, res) => {
   try {

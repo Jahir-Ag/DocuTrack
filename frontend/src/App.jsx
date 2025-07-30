@@ -134,7 +134,7 @@ function App() {
               } 
             />
             <Route 
-              path="/admin/request/:id" 
+              path="/admin/requests/:id" 
               element={
                 <ProtectedRoute adminOnly>
                   <AdminRequestDetail />

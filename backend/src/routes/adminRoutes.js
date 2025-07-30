@@ -9,7 +9,7 @@ const prisma = new PrismaClient();
 
 // Aplicar middleware de autenticación y admin a todas las rutas
 router.use(authenticateToken);
-router.use(requireRole(['admin']));
+router.use(requireRole(['ADMIN'])); 
 
 // GET /api/admin/requests - Obtener todas las solicitudes
 router.get('/requests', async (req, res) => {
@@ -61,16 +61,31 @@ router.get('/requests', async (req, res) => {
               firstName: true,
               lastName: true,
               email: true,
-              nationalId: true
+              nationalId: true,
+              phone: true
             }
           },
-          documents: {
+          document: {
             select: {
               id: true,
               fileName: true,
               originalName: true,
               fileSize: true,
+              mimeType: true,
               uploadedAt: true
+            }
+          },
+          statusHistory: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            include: {
+              changedBy: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                  email: true
+                }
+              }
             }
           },
           _count: {
@@ -135,13 +150,14 @@ router.get('/requests/:id', async (req, res) => {
             createdAt: true
           }
         },
-        documents: {
+        document: {
           select: {
             id: true,
             fileName: true,
             originalName: true,
             fileSize: true,
             mimeType: true,
+            filePath: true,
             uploadedAt: true
           }
         },
@@ -182,8 +198,8 @@ router.get('/requests/:id', async (req, res) => {
   }
 });
 
-// PUT /api/admin/requests/:id/status - Cambiar estado de solicitud
-router.put('/requests/:id/status', [
+// ✅ PATCH /api/admin/requests/:id/status - Cambiar estado de solicitud (REST-compliant)
+router.patch('/requests/:id/status', [
   body('status').isIn(['RECIBIDO', 'EN_VALIDACION', 'OBSERVADO', 'APROBADO', 'EMITIDO', 'RECHAZADO'])
     .withMessage('Estado inválido'),
   body('comment').optional().trim().isLength({ min: 1, max: 1000 })
@@ -214,6 +230,23 @@ router.put('/requests/:id/status', [
       });
     }
 
+    // Validaciones de transición de estado
+    const validTransitions = {
+      'RECIBIDO': ['EN_VALIDACION', 'RECHAZADO'],
+      'EN_VALIDACION': ['OBSERVADO', 'APROBADO', 'RECHAZADO'],
+      'OBSERVADO': ['EN_VALIDACION', 'APROBADO', 'RECHAZADO'],
+      'APROBADO': ['EMITIDO'],
+      'EMITIDO': [], // Estado final
+      'RECHAZADO': [] // Estado final
+    };
+
+    if (!validTransitions[existingRequest.status].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: `No se puede cambiar de ${existingRequest.status} a ${status}`
+      });
+    }
+
     // Actualizar en transacción
     const result = await prisma.$transaction(async (tx) => {
       // Actualizar la solicitud
@@ -222,16 +255,20 @@ router.put('/requests/:id/status', [
         data: {
           status,
           updatedAt: new Date(),
-          ...(status === 'EMITIDO' && { completedAt: new Date() })
+          processedAt: status === 'EN_VALIDACION' && !existingRequest.processedAt ? new Date() : existingRequest.processedAt,
+          completedAt: ['APROBADO', 'EMITIDO', 'RECHAZADO'].includes(status) ? new Date() : null
         },
         include: {
           user: {
             select: {
+              id: true,
               firstName: true,
               lastName: true,
-              email: true
+              email: true,
+              nationalId: true
             }
-          }
+          },
+          document: true
         }
       });
 
@@ -251,7 +288,7 @@ router.put('/requests/:id/status', [
 
     res.json({
       success: true,
-      message: 'Estado actualizado exitosamente',
+      message: `Estado actualizado a ${status} exitosamente`,
       data: { request: result }
     });
 
@@ -265,7 +302,56 @@ router.put('/requests/:id/status', [
   }
 });
 
-// GET /api/admin/requests/:id/documents/:docId - Descargar documento
+// ✅ GET /api/admin/requests/:id/document - Descarga directa del documento (para AdminRequestDetail)
+router.get('/requests/:id/document', async (req, res) => {
+  try {
+    const { id: requestId } = req.params;
+
+    // Buscar la solicitud con su documento
+    const request = await prisma.certificateRequest.findUnique({
+      where: { id: requestId },
+      include: {
+        document: true
+      }
+    });
+
+    if (!request || !request.document) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Documento no encontrado' 
+      });
+    }
+
+    const fs = require('fs').promises;
+
+    try {
+      await fs.access(request.document.filePath);
+    } catch {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Archivo no encontrado en el sistema' 
+      });
+    }
+
+    // Configurar headers para descarga
+    res.setHeader('Content-Type', request.document.mimeType);
+    res.setHeader('Content-Disposition', `attachment; filename="${request.document.originalName}"`);
+    res.setHeader('Content-Length', request.document.fileSize);
+
+    const fileBuffer = await fs.readFile(request.document.filePath);
+    res.send(fileBuffer);
+
+  } catch (error) {
+    console.error('Error descargando documento:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Error interno del servidor',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// GET /api/admin/requests/:id/documents/:docId - Descargar documento específico por ID
 router.get('/requests/:id/documents/:docId', async (req, res) => {
   try {
     const { id: requestId, docId } = req.params;
@@ -322,7 +408,99 @@ router.get('/requests/:id/documents/:docId', async (req, res) => {
   }
 });
 
-// GET /api/admin/dashboard - Dashboard con estadísticas generales
+// GET /api/admin/dashboard/stats - Estadísticas específicas para dashboard admin
+router.get('/dashboard/stats', async (req, res) => {
+  try {
+    const [
+      totalRequests,
+      pendingRequests,
+      approvedRequests,
+      rejectedRequests,
+      todayRequests,
+      requestsByType,
+      recentRequests
+    ] = await Promise.all([
+      // Total de solicitudes
+      prisma.certificateRequest.count(),
+      
+      // Solicitudes pendientes
+      prisma.certificateRequest.count({
+        where: {
+          status: {
+            in: ['RECIBIDO', 'EN_VALIDACION', 'OBSERVADO']
+          }
+        }
+      }),
+      
+      // Solicitudes aprobadas
+      prisma.certificateRequest.count({
+        where: { status: { in: ['APROBADO', 'EMITIDO'] } }
+      }),
+      
+      // Solicitudes rechazadas
+      prisma.certificateRequest.count({
+        where: { status: 'RECHAZADO' }
+      }),
+      
+      // Solicitudes de hoy
+      prisma.certificateRequest.count({
+        where: {
+          createdAt: {
+            gte: new Date(new Date().setHours(0, 0, 0, 0))
+          }
+        }
+      }),
+      
+      // Solicitudes por tipo
+      prisma.certificateRequest.groupBy({
+        by: ['certificateType'],
+        _count: {
+          certificateType: true
+        }
+      }),
+      
+      // Solicitudes recientes
+      prisma.certificateRequest.findMany({
+        take: 5,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true
+            }
+          }
+        }
+      })
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        stats: {
+          total: totalRequests,
+          pending: pendingRequests,
+          approved: approvedRequests,
+          rejected: rejectedRequests,
+          today: todayRequests
+        },
+        requestsByType,
+        recentRequests
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Error interno del servidor',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// GET /api/admin/dashboard - Dashboard con estadísticas generales (mantener compatibilidad)
 router.get('/dashboard', async (req, res) => {
   try {
     const [
@@ -332,7 +510,7 @@ router.get('/dashboard', async (req, res) => {
       completedRequests,
       recentRequests
     ] = await Promise.all([
-      prisma.user.count({ where: { role: 'user' } }),
+      prisma.user.count({ where: { role: 'USER' } }),
       prisma.certificateRequest.count(),
       prisma.certificateRequest.count({ 
         where: { 

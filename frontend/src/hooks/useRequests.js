@@ -25,20 +25,50 @@ export const useRequests = (initialFilters = {}) => {
         { ...filters, ...newFilters }
       );
     
-    setRequests(response.requests || []);
-    setPagination(response.pagination || {
-      page,
-      limit: pagination.limit,
-      total: response.requests?.length || 0,
-      pages: 1
-    });
-  } catch (err) {
-    setError(err.message);
-    setRequests([]);
-  } finally {
-    setLoading(false);
-  }
-}, [filters, pagination.limit]); // Solo estas dependencias
+      setRequests(response.requests || []);
+      setPagination(response.pagination || {
+        page,
+        limit: pagination.limit,
+        total: response.requests?.length || 0,
+        pages: 1
+      });
+    } catch (err) {
+      setError(err.message);
+      setRequests([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters, pagination.limit]);
+
+  // ✅ NUEVA FUNCIÓN: fetchAllRequests para admin
+  const fetchAllRequests = useCallback(async (page = 1, newFilters = {}) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      console.log('🔍 Fetching all requests for admin...');
+      const response = await requestService.getAllRequests(
+        page, 
+        50, // límite más alto para admin
+        { ...filters, ...newFilters }
+      );
+      
+      console.log('✅ Admin requests loaded:', response);
+      setRequests(response.requests || []);
+      setPagination(response.pagination || {
+        page,
+        limit: 50,
+        total: response.requests?.length || 0,
+        pages: 1
+      });
+    } catch (err) {
+      console.error('❌ Error fetching all requests:', err);
+      setError(err.message);
+      setRequests([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters]);
 
   // Crear nueva solicitud
   const createRequest = async (formData) => {
@@ -128,6 +158,7 @@ export const useRequests = (initialFilters = {}) => {
     filterByStatus,
     changePage,
     refresh,
-    loadRequests
+    loadRequests,
+    fetchAllRequests // ✅ EXPORTAR LA NUEVA FUNCIÓN
   };
 };

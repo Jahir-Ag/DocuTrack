@@ -30,8 +30,10 @@ const AdminRequestDetail = () => {
   const fetchRequestDetail = async () => {
     try {
       setLoading(true);
-      const response = await requestService.getRequestById(id);
-      setRequest(response.data);
+      const response = await requestService.getAdminRequestById(id);
+      console.log('✅ Request detail loaded:', response.data.request);
+      setRequest(response.data.request);
+      
     } catch (error) {
       console.error('Error fetching request detail:', error);
       setError('Error al cargar los detalles de la solicitud');
@@ -68,10 +70,9 @@ const AdminRequestDetail = () => {
     }
   };
 
-  const downloadDocument = async (documentPath) => {
+  const downloadDocument = async () => {
     try {
-      // This would typically be handled by your download service
-      window.open(`${import.meta.env.VITE_API_URL}/uploads/${documentPath}`, '_blank');
+      await requestService.downloadDocument(id);
     } catch (error) {
       console.error('Error downloading document:', error);
       setError('Error al descargar el documento');
@@ -84,42 +85,53 @@ const AdminRequestDetail = () => {
     const actions = [];
 
     switch (request.status) {
-      case REQUEST_STATUS.RECEIVED:
+      case 'RECIBIDO':
         actions.push(
           {
             label: 'Iniciar Validación',
-            status: REQUEST_STATUS.IN_VALIDATION,
+            status: 'EN_VALIDACION',
             color: 'bg-blue-600 hover:bg-blue-700',
             description: 'Marcar como en proceso de validación'
           },
           {
             label: 'Rechazar',
-            status: REQUEST_STATUS.REJECTED,
+            status: 'RECHAZADO',
             color: 'bg-red-600 hover:bg-red-700',
             description: 'Rechazar la solicitud'
           }
         );
         break;
 
-      case REQUEST_STATUS.IN_VALIDATION:
+      case 'EN_VALIDACION':
         actions.push(
           {
             label: 'Aprobar',
-            status: REQUEST_STATUS.APPROVED,
+            status: 'APROBADO',
             color: 'bg-green-600 hover:bg-green-700',
             description: 'Aprobar y generar certificado'
           },
           {
             label: 'Rechazar',
-            status: REQUEST_STATUS.REJECTED,
+            status: 'RECHAZADO',
             color: 'bg-red-600 hover:bg-red-700',
             description: 'Rechazar la solicitud'
           },
           {
-            label: 'Pedir Corrección',
-            status: REQUEST_STATUS.CORRECTION_REQUIRED,
+            label: 'Observar',
+            status: 'OBSERVADO',
             color: 'bg-yellow-600 hover:bg-yellow-700',
-            description: 'Solicitar correcciones al usuario'
+            description: 'Marcar con observaciones'
+          }
+        );
+        break;
+
+      case 'APROBADO':
+        actions.push(
+          {
+            label: 'Marcar como Emitido',
+            status: 'EMITIDO',
+            color: 'bg-green-600 hover:bg-green-700',
+            description: 'Marcar certificado como emitido'
           }
         );
         break;
@@ -181,7 +193,7 @@ const AdminRequestDetail = () => {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
-                Detalle de Solicitud #{request.id}
+                Solicitud #{request.requestNumber || request.id.slice(-8)}
               </h1>
               <p className="mt-2 text-gray-600">
                 Revisa y gestiona esta solicitud de certificado
@@ -213,7 +225,7 @@ const AdminRequestDetail = () => {
                 <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <dt className="text-sm font-medium text-gray-500">ID de Solicitud</dt>
-                    <dd className="mt-1 text-sm text-gray-900 font-mono">#{request.id}</dd>
+                    <dd className="mt-1 text-sm text-gray-900 font-mono">#{request.requestNumber || request.id.slice(-8)}</dd>
                   </div>
                   <div>
                     <dt className="text-sm font-medium text-gray-500">Estado Actual</dt>
@@ -226,6 +238,18 @@ const AdminRequestDetail = () => {
                     <dd className="mt-1 text-sm text-gray-900">{request.certificateType}</dd>
                   </div>
                   <div>
+                    <dt className="text-sm font-medium text-gray-500">Urgencia</dt>
+                    <dd className="mt-1 text-sm text-gray-900">
+                      <span className={`px-2 py-1 text-xs rounded-full ${
+                        request.urgency === 'URGENTE' 
+                          ? 'bg-red-100 text-red-800' 
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {request.urgency}
+                      </span>
+                    </dd>
+                  </div>
+                  <div>
                     <dt className="text-sm font-medium text-gray-500">Fecha de Solicitud</dt>
                     <dd className="mt-1 text-sm text-gray-900">{formatDate(request.createdAt)}</dd>
                   </div>
@@ -234,6 +258,13 @@ const AdminRequestDetail = () => {
                     <dd className="mt-1 text-sm text-gray-900">{formatDate(request.updatedAt)}</dd>
                   </div>
                 </dl>
+                
+                {request.reason && (
+                  <div className="mt-4">
+                    <dt className="text-sm font-medium text-gray-500">Motivo</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{request.reason}</dd>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -249,34 +280,42 @@ const AdminRequestDetail = () => {
                   <div className="flex-shrink-0 h-12 w-12">
                     <div className="h-12 w-12 rounded-full bg-gray-300 flex items-center justify-center">
                       <span className="text-lg font-medium text-gray-700">
-                        {request.user?.name?.charAt(0).toUpperCase() || 'U'}
+                        {(request.firstName || request.user?.firstName || 'U').charAt(0).toUpperCase()}
                       </span>
                     </div>
                   </div>
                   <div className="ml-4">
                     <h3 className="text-lg font-medium text-gray-900">
-                      {request.user?.name || 'Usuario'}
+                      {`${request.firstName} ${request.lastName}` || `${request.user?.firstName} ${request.user?.lastName}` || 'Usuario'}
                     </h3>
-                    <p className="text-sm text-gray-500">{request.user?.email}</p>
+                    <p className="text-sm text-gray-500">{request.email || request.user?.email}</p>
                   </div>
                 </div>
                 
                 <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <dt className="text-sm font-medium text-gray-500">Nombre Completo</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{request.fullName}</dd>
+                    <dd className="mt-1 text-sm text-gray-900">
+                      {`${request.firstName} ${request.lastName}` || 'No disponible'}
+                    </dd>
                   </div>
                   <div>
-                    <dt className="text-sm font-medium text-gray-500">Número de Identificación</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{request.identificationNumber}</dd>
+                    <dt className="text-sm font-medium text-gray-500">Cédula</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{request.cedula || 'No disponible'}</dd>
                   </div>
                   <div>
                     <dt className="text-sm font-medium text-gray-500">Fecha de Nacimiento</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{formatDate(request.dateOfBirth)}</dd>
+                    <dd className="mt-1 text-sm text-gray-900">
+                      {request.birthDate ? formatDate(request.birthDate) : 'No disponible'}
+                    </dd>
                   </div>
                   <div>
                     <dt className="text-sm font-medium text-gray-500">Teléfono</dt>
-                    <dd className="mt-1 text-sm text-gray-900">{request.phoneNumber}</dd>
+                    <dd className="mt-1 text-sm text-gray-900">{request.phone || 'No disponible'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Email</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{request.email || 'No disponible'}</dd>
                   </div>
                 </dl>
                 
@@ -284,6 +323,13 @@ const AdminRequestDetail = () => {
                   <div className="mt-4">
                     <dt className="text-sm font-medium text-gray-500">Dirección</dt>
                     <dd className="mt-1 text-sm text-gray-900">{request.address}</dd>
+                  </div>
+                )}
+                
+                {request.additionalInfo && (
+                  <div className="mt-4">
+                    <dt className="text-sm font-medium text-gray-500">Información Adicional</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{request.additionalInfo}</dd>
                   </div>
                 )}
               </div>
@@ -297,7 +343,7 @@ const AdminRequestDetail = () => {
                 </h2>
               </div>
               <div className="px-6 py-4">
-                {request.documentPath ? (
+                {request.document ? (
                   <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
                     <div className="flex items-center">
                       <div className="flex-shrink-0">
@@ -307,13 +353,15 @@ const AdminRequestDetail = () => {
                       </div>
                       <div className="ml-3">
                         <p className="text-sm font-medium text-gray-900">
-                          Documento de Identidad
+                          {request.document.originalName || 'Documento de Identidad'}
                         </p>
-                        <p className="text-sm text-gray-500">PDF</p>
+                        <p className="text-sm text-gray-500">
+                          {request.document.mimeType || 'PDF'} - {((request.document.fileSize || 0) / 1024 / 1024).toFixed(2)} MB
+                        </p>
                       </div>
                     </div>
                     <Button
-                      onClick={() => downloadDocument(request.documentPath)}
+                      onClick={downloadDocument}
                       variant="outline"
                       size="sm"
                     >
@@ -326,16 +374,58 @@ const AdminRequestDetail = () => {
               </div>
             </div>
 
-            {/* Comments/History Card */}
-            {request.comments && (
+            {/* Status History Card */}
+            {request.statusHistory && request.statusHistory.length > 0 && (
               <div className="bg-white shadow rounded-lg">
                 <div className="px-6 py-4 border-b border-gray-200">
                   <h2 className="text-lg font-medium text-gray-900">
-                    Comentarios Administrativos
+                    Historial de Estados
                   </h2>
                 </div>
                 <div className="px-6 py-4">
-                  <p className="text-sm text-gray-700">{request.comments}</p>
+                  <div className="flow-root">
+                    <ul className="-mb-8">
+                      {request.statusHistory.map((history, index) => (
+                        <li key={history.id}>
+                          <div className="relative pb-8">
+                            {index !== request.statusHistory.length - 1 && (
+                              <span className="absolute top-4 left-4 -ml-px h-full w-0.5 bg-gray-200"></span>
+                            )}
+                            <div className="relative flex space-x-3">
+                              <div>
+                                <span className={`h-8 w-8 rounded-full flex items-center justify-center ring-8 ring-white ${
+                                  history.newStatus === 'APROBADO' ? 'bg-green-500' :
+                                  history.newStatus === 'RECHAZADO' ? 'bg-red-500' :
+                                  history.newStatus === 'EN_VALIDACION' ? 'bg-blue-500' :
+                                  'bg-gray-500'
+                                }`}>
+                                  <svg className="h-4 w-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                </span>
+                              </div>
+                              <div className="min-w-0 flex-1 pt-1.5 flex justify-between space-x-4">
+                                <div>
+                                  <p className="text-sm text-gray-500">
+                                    Estado cambiado de <StatusBadge status={history.oldStatus} size="sm" /> a <StatusBadge status={history.newStatus} size="sm" />
+                                  </p>
+                                  {history.comment && (
+                                    <p className="mt-1 text-sm text-gray-700">{history.comment}</p>
+                                  )}
+                                  <p className="mt-1 text-xs text-gray-400">
+                                    Por {history.changedBy ? `${history.changedBy.firstName} ${history.changedBy.lastName}` : 'Sistema'}
+                                  </p>
+                                </div>
+                                <div className="text-right text-sm whitespace-nowrap text-gray-500">
+                                  {formatDate(history.createdAt)}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               </div>
             )}
@@ -368,17 +458,37 @@ const AdminRequestDetail = () => {
                     No hay acciones disponibles para el estado actual.
                   </p>
                 )}
-                
-                {request.status === REQUEST_STATUS.APPROVED && request.certificatePath && (
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <Button
-                      onClick={() => downloadDocument(request.certificatePath)}
-                      className="w-full bg-green-600 hover:bg-green-700"
-                    >
-                      Descargar Certificado
-                    </Button>
+              </div>
+            </div>
+
+            {/* Request Summary */}
+            <div className="bg-white shadow rounded-lg mt-6">
+              <div className="px-6 py-4 border-b border-gray-200">
+                <h2 className="text-lg font-medium text-gray-900">
+                  Resumen
+                </h2>
+              </div>
+              <div className="px-6 py-4">
+                <dl className="space-y-3">
+                  <div className="flex justify-between">
+                    <dt className="text-sm text-gray-500">Tiempo transcurrido:</dt>
+                    <dd className="text-sm text-gray-900">
+                      {Math.ceil((new Date() - new Date(request.createdAt)) / (1000 * 60 * 60 * 24))} días
+                    </dd>
                   </div>
-                )}
+                  {request.processedAt && (
+                    <div className="flex justify-between">
+                      <dt className="text-sm text-gray-500">Procesado:</dt>
+                      <dd className="text-sm text-gray-900">{formatDate(request.processedAt)}</dd>
+                    </div>
+                  )}
+                  {request.completedAt && (
+                    <div className="flex justify-between">
+                      <dt className="text-sm text-gray-500">Completado:</dt>
+                      <dd className="text-sm text-gray-900">{formatDate(request.completedAt)}</dd>
+                    </div>
+                  )}
+                </dl>
               </div>
             </div>
           </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { useRequests } from '../../hooks/useRequests';
+import { requestService } from '../../services/requestService';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import StatusBadge from '../../components/common/StatusBadge';
 import Button from '../../components/common/Button';
@@ -11,7 +11,12 @@ import { REQUEST_STATUS } from '../../utils/constants';
 const AdminRequests = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { requests, loading, error, fetchAllRequests } = useRequests();
+  
+  // ✅ CORREGIDO: Estado local en lugar de useRequests
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
   const [filteredRequests, setFilteredRequests] = useState([]);
   const [filters, setFilters] = useState({
     status: 'all',
@@ -20,11 +25,27 @@ const AdminRequests = () => {
     sortOrder: 'desc'
   });
 
+  // ✅ CORREGIDO: Función que usa el servicio de admin
+  const fetchAllRequests = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await requestService.getAdminRequests();
+      setRequests(response.data.requests || []);
+    } catch (err) {
+      console.error('Error fetching admin requests:', err);
+      setError(err.message);
+      setRequests([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (user && user.role === 'ADMIN') {
       fetchAllRequests();
     }
-  }, [user, fetchAllRequests]);
+  }, [user]);
 
   useEffect(() => {
     let filtered = [...requests];
@@ -38,9 +59,11 @@ const AdminRequests = () => {
     if (filters.search) {
       const searchLower = filters.search.toLowerCase();
       filtered = filtered.filter(request => 
-        request.user?.name?.toLowerCase().includes(searchLower) ||
+        request.user?.firstName?.toLowerCase().includes(searchLower) ||
+        request.user?.lastName?.toLowerCase().includes(searchLower) ||
         request.user?.email?.toLowerCase().includes(searchLower) ||
-        request.certificateType?.toLowerCase().includes(searchLower)
+        request.certificateType?.toLowerCase().includes(searchLower) ||
+        request.requestNumber?.toLowerCase().includes(searchLower)
       );
     }
 
@@ -51,8 +74,8 @@ const AdminRequests = () => {
 
       // Handle nested properties
       if (filters.sortBy === 'userName') {
-        aValue = a.user?.name || '';
-        bValue = b.user?.name || '';
+        aValue = `${a.user?.firstName || ''} ${a.user?.lastName || ''}`.trim();
+        bValue = `${b.user?.firstName || ''} ${b.user?.lastName || ''}`.trim();
       }
 
       if (filters.sortBy === 'createdAt') {
@@ -79,14 +102,20 @@ const AdminRequests = () => {
 
   const getStatusOptions = () => [
     { value: 'all', label: 'Todos los Estados' },
-    { value: REQUEST_STATUS.RECEIVED, label: 'Recibido' },
-    { value: REQUEST_STATUS.IN_VALIDATION, label: 'En Validación' },
-    { value: REQUEST_STATUS.APPROVED, label: 'Aprobado' },
-    { value: REQUEST_STATUS.REJECTED, label: 'Rechazado' }
+    { value: 'RECIBIDO', label: 'Recibido' },
+    { value: 'EN_VALIDACION', label: 'En Validación' },
+    { value: 'OBSERVADO', label: 'Observado' },
+    { value: 'APROBADO', label: 'Aprobado' },
+    { value: 'EMITIDO', label: 'Emitido' },
+    { value: 'RECHAZADO', label: 'Rechazado' }
   ];
 
   if (authLoading || loading) {
-    return <LoadingSpinner />;
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <LoadingSpinner />
+      </div>
+    );
   }
 
   if (!user || user.role !== 'ADMIN') {
@@ -105,7 +134,7 @@ const AdminRequests = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Error al cargar solicitudes</h2>
           <p className="text-gray-600 mb-4">{error}</p>
           <Button onClick={() => fetchAllRequests()}>Reintentar</Button>
         </div>
@@ -231,7 +260,7 @@ const AdminRequests = () => {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      ID
+                      Número
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Solicitante
@@ -254,20 +283,20 @@ const AdminRequests = () => {
                   {filteredRequests.map((request) => (
                     <tr key={request.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
-                        #{request.id}
+                        {request.requestNumber}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10">
                             <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
                               <span className="text-sm font-medium text-gray-700">
-                                {request.user?.name?.charAt(0).toUpperCase() || 'U'}
+                                {request.user?.firstName?.charAt(0).toUpperCase() || 'U'}
                               </span>
                             </div>
                           </div>
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">
-                              {request.user?.name || 'Usuario'}
+                              {`${request.user?.firstName || ''} ${request.user?.lastName || ''}`.trim() || 'Usuario'}
                             </div>
                             <div className="text-sm text-gray-500">
                               {request.user?.email}
