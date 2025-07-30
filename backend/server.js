@@ -150,3 +150,19 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`📈 Health:   http://0.0.0.0:${PORT}/api/health`);
   console.log(`🌐 CORS Origins:`, allowedOrigins);
 });
+
+process.on('SIGTERM', () => {
+  console.log('🔄 SIGTERM recibido, cerrando servidor...');
+  server.close(() => {
+    console.log('✅ Servidor cerrado correctamente');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('🔄 SIGINT recibido, cerrando servidor...');
+  server.close(() => {
+    console.log('✅ Servidor cerrado correctamente');
+    process.exit(0);
+  });
+});
