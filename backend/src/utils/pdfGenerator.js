@@ -7,7 +7,8 @@ class ModernPDFGenerator {
       try {
         const doc = new PDFDocument({
           size: 'A4',
-          margin: 40,
+          margins: { top: 40, bottom: 40, left: 40, right: 40 },
+          bufferPages: true,
           info: {
             Title: `Certificado ${request.certificateType}`,
             Author: 'DocuTrack - Sistema de Gestión de Trámites',
@@ -80,38 +81,58 @@ class ModernPDFGenerator {
     const headerHeight = 80;
     
     // Fondo del header
+    doc.save();
     doc.rect(margin, startY, contentWidth, headerHeight)
        .fillColor(colors.light)
        .fill()
        .strokeColor(colors.border)
        .lineWidth(1)
        .stroke();
+    doc.restore();
 
-    // Escudo/Logo (simulado con emoji)
-    doc.fontSize(32)
+    // Logo/Escudo simulado con texto en lugar de emoji
+    doc.save();
+    doc.rect(margin + 15, startY + 15, 50, 50)
        .fillColor(colors.primary)
-       .text('🏛️', margin + 20, startY + 15);
+       .fill();
+    
+    doc.fillColor('#ffffff')
+       .fontSize(12)
+       .font('Helvetica-Bold')
+       .text('GOB', margin + 28, startY + 30)
+       .text('PA', margin + 32, startY + 45);
+    doc.restore();
 
     // Texto institucional
     const textX = margin + 80;
-    doc.fontSize(16)
-       .fillColor(colors.primary)
+    doc.fillColor(colors.primary)
+       .fontSize(16)
        .font('Helvetica-Bold')
-       .text('REPÚBLICA DE PANAMÁ', textX, startY + 10);
+       .text('REPUBLICA DE PANAMA', textX, startY + 10);
     
-    doc.fontSize(14)
-       .fillColor(colors.text)
+    doc.fillColor(colors.text)
+       .fontSize(14)
        .font('Helvetica')
        .text('MINISTERIO DE GOBIERNO', textX, startY + 30);
     
-    doc.fontSize(10)
-       .fillColor(colors.secondary)
-       .text('Sistema DocuTrack - Gestión Digital de Trámites', textX, startY + 50);
+    doc.fillColor(colors.secondary)
+       .fontSize(10)
+       .text('Sistema DocuTrack - Gestion Digital de Tramites', textX, startY + 50);
 
     // Fecha de generación (alineada a la derecha)
-    const currentDate = new Date().toLocaleString('es-ES');
-    doc.fontSize(8)
-       .fillColor(colors.secondary)
+    const currentDate = new Date().toLocaleString('es-PA', {
+      timeZone: 'America/Panama',
+      year: 'numeric',
+      month: '2-digit', 
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
+    
+    doc.fillColor(colors.secondary)
+       .fontSize(8)
        .text(`Generado: ${currentDate}`, margin + contentWidth - 120, startY + 10);
 
     return startY + headerHeight + 30;
@@ -121,7 +142,7 @@ class ModernPDFGenerator {
   static drawCertificateTitle(doc, certificateType, margin, startY, contentWidth, colors) {
     const titles = {
       'NACIMIENTO': 'CERTIFICADO DE NACIMIENTO',
-      'ESTUDIOS': 'CERTIFICADO DE ESTUDIOS',
+      'ESTUDIOS': 'CERTIFICADO DE ESTUDIOS', 
       'RESIDENCIA': 'CERTIFICADO DE RESIDENCIA',
       'ANTECEDENTES': 'CERTIFICADO DE ANTECEDENTES PENALES'
     };
@@ -130,30 +151,37 @@ class ModernPDFGenerator {
     const titleHeight = 60;
 
     // Fondo del título
+    doc.save();
     doc.rect(margin, startY, contentWidth, titleHeight)
        .fillColor('#eff6ff')
        .fill()
        .strokeColor(colors.primary)
        .lineWidth(2)
        .stroke();
+    doc.restore();
 
-    // Título principal
-    doc.fontSize(18)
-       .fillColor(colors.primary)
-       .font('Helvetica-Bold')
-       .text(title, margin, startY + 15, {
-         width: contentWidth,
-         align: 'center'
-       });
+    // Título principal - centrado manualmente
+    doc.save();
+    doc.fillColor(colors.primary)
+       .fontSize(18)
+       .font('Helvetica-Bold');
+    
+    const titleWidth = doc.widthOfString(title);
+    const titleX = margin + (contentWidth - titleWidth) / 2;
+    doc.text(title, titleX, startY + 15);
+    doc.restore();
 
     // Subtítulo
-    doc.fontSize(10)
-       .fillColor(colors.secondary)
-       .font('Helvetica')
-       .text('Documento Oficial con Validez Legal', margin, startY + 40, {
-         width: contentWidth,
-         align: 'center'
-       });
+    doc.save();
+    doc.fillColor(colors.secondary)
+       .fontSize(10)
+       .font('Helvetica');
+    
+    const subtitle = 'Documento Oficial con Validez Legal';
+    const subtitleWidth = doc.widthOfString(subtitle);
+    const subtitleX = margin + (contentWidth - subtitleWidth) / 2;
+    doc.text(subtitle, subtitleX, startY + 40);
+    doc.restore();
 
     return startY + titleHeight + 25;
   }
@@ -163,69 +191,85 @@ class ModernPDFGenerator {
     const sectionHeight = 80;
     
     // Título de sección
-    doc.fontSize(12)
-       .fillColor(colors.text)
+    doc.save();
+    doc.fillColor(colors.text)
+       .fontSize(12)
        .font('Helvetica-Bold')
-       .text('INFORMACIÓN DEL CERTIFICADO', margin, startY);
+       .text('INFORMACION DEL CERTIFICADO', margin, startY);
+    doc.restore();
 
     startY += 20;
 
     // Fondo de la sección
+    doc.save();
     doc.rect(margin, startY, contentWidth, sectionHeight - 20)
        .fillColor('#fafafa')
        .fill()
        .strokeColor(colors.border)
        .lineWidth(1)
        .stroke();
+    doc.restore();
 
     const infoStartY = startY + 15;
     const leftCol = margin + 20;
     const rightCol = margin + (contentWidth / 2) + 20;
 
     // Información en dos columnas
-    doc.fontSize(9)
-       .fillColor(colors.secondary)
+    doc.save();
+    doc.fillColor(colors.secondary)
+       .fontSize(9)
        .font('Helvetica')
-       .text('Número de Certificado:', leftCol, infoStartY);
+       .text('Numero de Certificado:', leftCol, infoStartY);
     
-    doc.fontSize(10)
-       .fillColor(colors.text)
+    doc.fillColor(colors.text)
+       .fontSize(10)
        .font('Helvetica-Bold')
-       .text(request.requestNumber, leftCol, infoStartY + 12);
+       .text(request.requestNumber || 'N/A', leftCol, infoStartY + 12);
+    doc.restore();
 
     // Fecha de emisión
     const emissionDate = request.completedAt || request.updatedAt || new Date();
-    doc.fontSize(9)
-       .fillColor(colors.secondary)
-       .font('Helvetica')
-       .text('Fecha de Emisión:', rightCol, infoStartY);
+    const formattedEmissionDate = new Date(emissionDate).toLocaleDateString('es-PA');
     
-    doc.fontSize(10)
-       .fillColor(colors.text)
+    doc.save();
+    doc.fillColor(colors.secondary)
+       .fontSize(9)
+       .font('Helvetica')
+       .text('Fecha de Emision:', rightCol, infoStartY);
+    
+    doc.fillColor(colors.text)
+       .fontSize(10)
        .font('Helvetica-Bold')
-       .text(new Date(emissionDate).toLocaleDateString('es-ES'), rightCol, infoStartY + 12);
+       .text(formattedEmissionDate, rightCol, infoStartY + 12);
+    doc.restore();
 
     // Fecha de solicitud
-    doc.fontSize(9)
-       .fillColor(colors.secondary)
+    const formattedRequestDate = new Date(request.createdAt).toLocaleDateString('es-PA');
+    
+    doc.save();
+    doc.fillColor(colors.secondary)
+       .fontSize(9)
        .font('Helvetica')
        .text('Fecha de Solicitud:', leftCol, infoStartY + 35);
     
-    doc.fontSize(10)
-       .fillColor(colors.text)
+    doc.fillColor(colors.text)
+       .fontSize(10)
        .font('Helvetica')
-       .text(new Date(request.createdAt).toLocaleDateString('es-ES'), leftCol, infoStartY + 47);
+       .text(formattedRequestDate, leftCol, infoStartY + 47);
+    doc.restore();
 
     // Estado
-    doc.fontSize(9)
-       .fillColor(colors.secondary)
+    doc.save();
+    doc.fillColor(colors.secondary)
+       .fontSize(9)
        .font('Helvetica')
        .text('Estado:', rightCol, infoStartY + 35);
     
-    doc.fontSize(10)
-       .fillColor(colors.success)
+    doc.fillColor(colors.success)
+       .fontSize(10)
        .font('Helvetica-Bold')
        .text('EMITIDO', rightCol, infoStartY + 47);
+    doc.restore();
 
     return startY + sectionHeight + 15;
   }
@@ -235,45 +279,59 @@ class ModernPDFGenerator {
     const sectionHeight = 120;
     
     // Título de sección
-    doc.fontSize(12)
-       .fillColor(colors.text)
+    doc.save();
+    doc.fillColor(colors.text)
+       .fontSize(12)
        .font('Helvetica-Bold')
        .text('DATOS DEL SOLICITANTE', margin, startY);
+    doc.restore();
 
     startY += 20;
 
     // Fondo de la sección
+    doc.save();
     doc.rect(margin, startY, contentWidth, sectionHeight - 20)
        .fillColor('#f9fafb')
        .fill()
        .strokeColor(colors.border)
        .lineWidth(1)
        .stroke();
+    doc.restore();
 
     const infoStartY = startY + 15;
     const leftCol = margin + 20;
     const rightCol = margin + (contentWidth / 2) + 20;
 
+    // Obtener datos del usuario
+    const firstName = request.user?.firstName || request.firstName || 'N/A';
+    const lastName = request.user?.lastName || request.lastName || '';
+    const fullName = `${firstName} ${lastName}`.trim();
+    const nationalId = request.user?.nationalId || request.nationalId || 'N/A';
+    const email = request.user?.email || request.email || 'N/A';
+    const phone = request.user?.phone || request.phone || 'No proporcionado';
+
     // Datos personales
     const personalData = [
-      { label: 'Nombre Completo:', value: `${request.user.firstName} ${request.user.lastName}`, x: leftCol },
-      { label: 'Cédula de Identidad:', value: request.user.nationalId, x: rightCol },
-      { label: 'Correo Electrónico:', value: request.user.email, x: leftCol },
-      { label: 'Teléfono:', value: request.user.phone || 'No proporcionado', x: rightCol }
+      { label: 'Nombre Completo:', value: fullName, x: leftCol },
+      { label: 'Cedula de Identidad:', value: nationalId, x: rightCol },
+      { label: 'Correo Electronico:', value: email, x: leftCol },
+      { label: 'Telefono:', value: phone, x: rightCol }
     ];
 
     personalData.forEach((item, index) => {
       const yPos = infoStartY + (Math.floor(index / 2) * 40);
       
-      doc.fontSize(9)
-         .fillColor(colors.secondary)
+      doc.save();
+      doc.fillColor(colors.secondary)
+         .fontSize(9)
          .font('Helvetica')
          .text(item.label, item.x, yPos);
       
-      doc.fontSize(10)
-         .fillColor(colors.text)
+      doc.fillColor(colors.text)
+         .fontSize(10)
          .font('Helvetica-Bold')
-         .text(item.value, item.x, yPos + 12, { width: 200 });
+         .text(item.value, item.x, yPos + 12, { width: 200, ellipsis: true });
+      doc.restore();
     });
 
     return startY + sectionHeight + 15;
@@ -284,36 +342,44 @@ class ModernPDFGenerator {
     const sectionHeight = 100;
     
     // Título de sección
-    doc.fontSize(12)
-       .fillColor(colors.text)
+    doc.save();
+    doc.fillColor(colors.text)
+       .fontSize(12)
        .font('Helvetica-Bold')
        .text('DETALLES DE LA SOLICITUD', margin, startY);
+    doc.restore();
 
     startY += 20;
 
     // Motivo de la solicitud
-    doc.fontSize(9)
-       .fillColor(colors.secondary)
+    doc.save();
+    doc.fillColor(colors.secondary)
+       .fontSize(9)
        .font('Helvetica')
        .text('Motivo de la solicitud:', margin, startY);
+    doc.restore();
 
     startY += 15;
 
     // Fondo para el motivo
+    doc.save();
     doc.rect(margin, startY, contentWidth, 50)
        .fillColor('#fafafa')
        .fill()
        .strokeColor(colors.border)
        .lineWidth(1)
        .stroke();
+    doc.restore();
 
-    doc.fontSize(10)
-       .fillColor(colors.text)
+    doc.save();
+    doc.fillColor(colors.text)
+       .fontSize(10)
        .font('Helvetica')
-       .text(request.reason, margin + 10, startY + 10, {
+       .text(request.reason || 'No especificado', margin + 10, startY + 10, {
          width: contentWidth - 20,
          align: 'justify'
        });
+    doc.restore();
 
     startY += 65;
 
@@ -321,30 +387,36 @@ class ModernPDFGenerator {
     const leftCol = margin;
     const rightCol = margin + (contentWidth / 2);
 
-    doc.fontSize(9)
-       .fillColor(colors.secondary)
+    doc.save();
+    doc.fillColor(colors.secondary)
+       .fontSize(9)
        .font('Helvetica')
        .text('Tipo de procesamiento:', leftCol, startY);
+    doc.restore();
 
     const urgencyText = request.urgency === 'URGENTE' ? 'PROCESAMIENTO URGENTE' : 'PROCESAMIENTO NORMAL';
     const urgencyColor = request.urgency === 'URGENTE' ? '#dc2626' : colors.success;
 
-    doc.fontSize(10)
-       .fillColor(urgencyColor)
+    doc.save();
+    doc.fillColor(urgencyColor)
+       .fontSize(10)
        .font('Helvetica-Bold')
        .text(urgencyText, leftCol, startY + 12);
+    doc.restore();
 
     // Documento adjunto (si existe)
-    if (request.document) {
-      doc.fontSize(9)
-         .fillColor(colors.secondary)
+    if (request.document?.originalName) {
+      doc.save();
+      doc.fillColor(colors.secondary)
+         .fontSize(9)
          .font('Helvetica')
          .text('Documento adjunto:', rightCol, startY);
       
-      doc.fontSize(10)
-         .fillColor(colors.text)
+      doc.fillColor(colors.text)
+         .fontSize(10)
          .font('Helvetica')
-         .text(request.document.originalName, rightCol, startY + 12, { width: 200 });
+         .text(request.document.originalName, rightCol, startY + 12, { width: 200, ellipsis: true });
+      doc.restore();
     }
 
     return startY + 40;
@@ -355,44 +427,59 @@ class ModernPDFGenerator {
     const sectionHeight = 80;
     
     // Fondo de validación
+    doc.save();
     doc.rect(margin, startY, contentWidth, sectionHeight)
        .fillColor('#fef3c7')
        .fill()
        .strokeColor('#f59e0b')
        .lineWidth(2)
        .stroke();
+    doc.restore();
 
-    // Icono de seguridad
-    doc.fontSize(16)
+    // Icono de seguridad (texto en lugar de emoji)
+    doc.save();
+    doc.rect(margin + 15, startY + 15, 20, 15)
        .fillColor('#f59e0b')
-       .text('🔐', margin + 15, startY + 15);
+       .fill();
+    
+    doc.fillColor('#ffffff')
+       .fontSize(8)
+       .font('Helvetica-Bold')
+       .text('SEC', margin + 18, startY + 20);
+    doc.restore();
 
     // Título
-    doc.fontSize(12)
-       .fillColor('#92400e')
+    doc.save();
+    doc.fillColor('#92400e')
+       .fontSize(12)
        .font('Helvetica-Bold')
-       .text('VALIDACIÓN OFICIAL Y SEGURIDAD', margin + 45, startY + 15);
+       .text('VALIDACION OFICIAL Y SEGURIDAD', margin + 45, startY + 15);
+    doc.restore();
 
     // Texto de validación
     const validationText = [
       'Este certificado ha sido generado digitalmente por el Sistema DocuTrack del',
-      'Ministerio de Gobierno de la República de Panamá, y cuenta con plena validez',
-      'legal según las normativas vigentes. Su autenticidad puede ser verificada.'
+      'Ministerio de Gobierno de la Republica de Panama, y cuenta con plena validez',
+      'legal segun las normativas vigentes. Su autenticidad puede ser verificada.'
     ];
 
     validationText.forEach((line, index) => {
-      doc.fontSize(9)
-         .fillColor('#78350f')
+      doc.save();
+      doc.fillColor('#78350f')
+         .fontSize(9)
          .font('Helvetica')
          .text(line, margin + 15, startY + 35 + (index * 10));
+      doc.restore();
     });
 
     // Código de verificación
     const verificationCode = this.generateVerificationCode(request);
-    doc.fontSize(10)
-       .fillColor('#92400e')
+    doc.save();
+    doc.fillColor('#92400e')
+       .fontSize(10)
        .font('Helvetica-Bold')
-       .text(`Código de Verificación: ${verificationCode}`, margin + 15, startY + 70);
+       .text(`Codigo de Verificacion: ${verificationCode}`, margin + 15, startY + 70);
+    doc.restore();
 
     return startY + sectionHeight + 20;
   }
@@ -402,16 +489,19 @@ class ModernPDFGenerator {
     const footerY = doc.page.height - 80;
     
     // Línea superior
+    doc.save();
     doc.moveTo(margin, footerY)
        .lineTo(doc.page.width - margin, footerY)
        .strokeColor(colors.border)
        .lineWidth(1)
        .stroke();
+    doc.restore();
 
     // QR Code simulado
     const qrSize = 50;
     const qrX = doc.page.width - margin - qrSize - 10;
     
+    doc.save();
     doc.rect(qrX, footerY + 5, qrSize, qrSize)
        .fillColor('#ffffff')
        .fill()
@@ -419,50 +509,62 @@ class ModernPDFGenerator {
        .lineWidth(1)
        .stroke();
     
-    doc.fontSize(8)
-       .fillColor(colors.primary)
+    doc.fillColor(colors.primary)
+       .fontSize(8)
        .font('Helvetica-Bold')
        .text('QR', qrX + 18, footerY + 20);
     
-    doc.fontSize(6)
-       .fillColor(colors.secondary)
+    doc.fillColor(colors.secondary)
+       .fontSize(6)
        .text('Verificar', qrX + 12, footerY + 30);
+    doc.restore();
 
     // Información del footer
     const footerTexts = [
-      'Este documento fue generado automáticamente por el Sistema DocuTrack',
-      'Ministerio de Gobierno - República de Panamá',
+      'Este documento fue generado automaticamente por el Sistema DocuTrack',
+      'Ministerio de Gobierno - Republica de Panama',
       'Para verificar autenticidad: www.docutrack.gob.pa/verificar'
     ];
 
     footerTexts.forEach((text, index) => {
-      doc.fontSize(7)
-         .fillColor(colors.secondary)
-         .font('Helvetica')
-         .text(text, margin, footerY + 10 + (index * 10), {
-           width: doc.page.width - margin - qrSize - 30,
-           align: 'center'
-         });
+      doc.save();
+      doc.fillColor(colors.secondary)
+         .fontSize(7)
+         .font('Helvetica');
+      
+      const textWidth = doc.widthOfString(text);
+      const textX = margin + ((doc.page.width - margin - qrSize - 30) - textWidth) / 2;
+      doc.text(text, textX, footerY + 10 + (index * 10));
+      doc.restore();
     });
 
     // ID del documento
-    doc.fontSize(6)
-       .fillColor('#d1d5db')
+    doc.save();
+    doc.fillColor('#d1d5db')
+       .fontSize(6)
        .text(`ID: ${request.id}`, margin, footerY + 45);
+    doc.restore();
   }
 
   // === MARCA DE AGUA ===
   static drawWatermark(doc, colors) {
     doc.save();
     
+    // Configurar opacidad y fuente
     doc.fillOpacity(0.05)
-       .fontSize(60)
        .fillColor(colors.primary)
+       .fontSize(60)
        .font('Helvetica-Bold');
     
     // Rotar y centrar
-    doc.rotate(-45, { origin: [doc.page.width / 2, doc.page.height / 2] });
-    doc.text('DOCUTRACK', doc.page.width / 2 - 150, doc.page.height / 2 - 20);
+    const centerX = doc.page.width / 2;
+    const centerY = doc.page.height / 2;
+    
+    doc.rotate(-45, { origin: [centerX, centerY] });
+    
+    const watermarkText = 'DOCUTRACK';
+    const textWidth = doc.widthOfString(watermarkText);
+    doc.text(watermarkText, centerX - textWidth / 2, centerY - 20);
     
     doc.restore();
   }
@@ -487,7 +589,7 @@ class ModernPDFGenerator {
       try {
         const doc = new PDFDocument({
           size: 'A4',
-          margin: 30,
+          margins: { top: 30, bottom: 30, left: 30, right: 30 },
           info: {
             Title: 'Reporte de Solicitudes - DocuTrack',
             Author: 'DocuTrack - Sistema de Gestión de Trámites',
@@ -506,17 +608,21 @@ class ModernPDFGenerator {
         const contentWidth = doc.page.width - (margin * 2);
 
         // Header del reporte
-        doc.fontSize(16)
-           .fillColor('#1e40af')
+        doc.save();
+        doc.fillColor('#1e40af')
+           .fontSize(16)
            .font('Helvetica-Bold')
            .text('REPORTE DE SOLICITUDES - DOCUTRACK', margin, currentY);
+        doc.restore();
 
         currentY += 30;
 
-        doc.fontSize(10)
-           .fillColor('#64748b')
+        doc.save();
+        doc.fillColor('#64748b')
+           .fontSize(10)
            .font('Helvetica')
-           .text(`Generado: ${new Date().toLocaleString('es-ES')}`, margin, currentY);
+           .text(`Generado: ${new Date().toLocaleString('es-PA')}`, margin, currentY);
+        doc.restore();
 
         currentY += 30;
 
@@ -524,16 +630,18 @@ class ModernPDFGenerator {
         const stats = this.calculateStats(requests);
         const statsText = `Total: ${stats.total} | Emitidos: ${stats.emitidos} | Pendientes: ${stats.pendientes}`;
         
-        doc.fontSize(10)
-           .fillColor('#1f2937')
+        doc.save();
+        doc.fillColor('#1f2937')
+           .fontSize(10)
            .font('Helvetica-Bold')
            .text(statsText, margin, currentY);
+        doc.restore();
 
         currentY += 40;
 
         // Headers de tabla
         const headers = [
-          { text: 'Número', x: margin, width: 100 },
+          { text: 'Numero', x: margin, width: 100 },
           { text: 'Usuario', x: margin + 100, width: 120 },
           { text: 'Tipo', x: margin + 220, width: 80 },
           { text: 'Estado', x: margin + 300, width: 60 },
@@ -541,18 +649,22 @@ class ModernPDFGenerator {
         ];
 
         // Línea de header
+        doc.save();
         doc.rect(margin, currentY, contentWidth, 20)
            .fillColor('#f8fafc')
            .fill()
            .strokeColor('#e2e8f0')
            .lineWidth(1)
            .stroke();
+        doc.restore();
 
         headers.forEach(header => {
-          doc.fontSize(9)
-             .fillColor('#1f2937')
+          doc.save();
+          doc.fillColor('#1f2937')
+             .fontSize(9)
              .font('Helvetica-Bold')
              .text(header.text, header.x + 5, currentY + 6);
+          doc.restore();
         });
 
         currentY += 25;
@@ -566,23 +678,33 @@ class ModernPDFGenerator {
 
           const bgColor = index % 2 === 0 ? '#ffffff' : '#f9fafb';
           
+          doc.save();
           doc.rect(margin, currentY, contentWidth, 18)
              .fillColor(bgColor)
              .fill();
+          doc.restore();
+
+          const requestNumber = (request.requestNumber || 'N/A').substring(0, 18);
+          const userName = `${request.user?.firstName || request.firstName || ''} ${request.user?.lastName || request.lastName || ''}`.trim().substring(0, 20) || 'N/A';
+          const certificateType = (request.certificateType || 'N/A').substring(0, 12);
+          const status = request.status || 'N/A';
+          const createdDate = request.createdAt ? new Date(request.createdAt).toLocaleDateString('es-PA') : 'N/A';
 
           const data = [
-            { text: request.requestNumber.substring(0, 18), x: margin + 5 },
-            { text: `${request.user?.firstName || request.firstName} ${request.user?.lastName || request.lastName}`.substring(0, 20), x: margin + 105 },
-            { text: request.certificateType.substring(0, 12), x: margin + 225 },
-            { text: request.status, x: margin + 305 },
-            { text: new Date(request.createdAt).toLocaleDateString('es-ES'), x: margin + 365 }
+            { text: requestNumber, x: margin + 5 },
+            { text: userName, x: margin + 105 },
+            { text: certificateType, x: margin + 225 },
+            { text: status, x: margin + 305 },
+            { text: createdDate, x: margin + 365 }
           ];
 
           data.forEach(item => {
-            doc.fontSize(8)
-               .fillColor('#374151')
+            doc.save();
+            doc.fillColor('#374151')
+               .fontSize(8)
                .font('Helvetica')
                .text(item.text, item.x, currentY + 5);
+            doc.restore();
           });
 
           currentY += 18;
@@ -591,10 +713,12 @@ class ModernPDFGenerator {
         // Nota si hay más registros
         if (requests.length > 25) {
           currentY += 20;
-          doc.fontSize(8)
-             .fillColor('#6b7280')
+          doc.save();
+          doc.fillColor('#6b7280')
+             .fontSize(8)
              .font('Helvetica-Oblique')
              .text(`Mostrando primeros 25 de ${requests.length} registros`, margin, currentY);
+          doc.restore();
         }
 
         doc.end();
