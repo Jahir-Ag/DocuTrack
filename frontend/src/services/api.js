@@ -1,11 +1,10 @@
 import axios from 'axios';
 
 // Configuración base de la API usando Vite
-// ✅ CORREGIDO: Puerto 3001 en lugar de 3000
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 const api = axios.create({
-  baseURL: 'http://localhost:3001/api', // ✅ Con /api al final
+  baseURL: API_BASE_URL, // ✅ CORREGIDO: Usar la variable de entorno
   headers: {
     'Content-Type': 'application/json',
   },
