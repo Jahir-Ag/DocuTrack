@@ -29,14 +29,25 @@ const devOrigins = [
   'http://127.0.0.1:3000',
 ];
 
-// En producción, toma APP_URL de env; en dev usa la lista anterior
-const allowedOrigins = process.env.NODE_ENV === 'production'
-  ? [process.env.APP_URL].filter(Boolean)
+// Orígenes de producción
+const prodOrigins = [
+  'https://docu-track-beta.vercel.app',  // Tu dominio de Vercel
+  process.env.APP_URL,                   // Variable de entorno adicional si la tienes
+  process.env.FRONTEND_URL,              // La que agregaste en Railway
+].filter(Boolean); // Elimina valores undefined/null
+
+// En producción usa prodOrigins, en desarrollo usa devOrigins
+const allowedOrigins = process.env.NODE_ENV === 'production' 
+  ? prodOrigins 
   : devOrigins;
+
+console.log('🔗 CORS configurado para:', allowedOrigins);
 
 app.use(cors({
   origin: allowedOrigins,
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 // Rate limiting
@@ -70,13 +81,14 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development',
     version: '1.0.0',
+    corsOrigins: allowedOrigins, // Para debug
   });
 });
 
 // Manejo de errores
 app.use((err, req, res, next) => {
   console.error('Error stack:', err.stack);
-
+  
   // Multer
   if (err.code === 'LIMIT_FILE_SIZE') {
     return res.status(400).json({
@@ -90,7 +102,7 @@ app.use((err, req, res, next) => {
       details: 'Máximo 5 archivos permitidos',
     });
   }
-
+  
   // Prisma
   if (err.code === 'P2002') {
     return res.status(400).json({
@@ -98,7 +110,7 @@ app.use((err, req, res, next) => {
       details: 'Ya existe un registro con esos datos',
     });
   }
-
+  
   // Genérico
   res.status(500).json({
     error: 'Error interno del servidor',
@@ -120,4 +132,5 @@ app.listen(PORT, () => {
   console.log(`📊 Ambiente: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 API base: http://localhost:${PORT}/api`);
   console.log(`📈 Health:   http://localhost:${PORT}/api/health`);
+  console.log(`🌐 CORS Origins:`, allowedOrigins);
 });
