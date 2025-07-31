@@ -22,16 +22,16 @@ const loginValidation = [
   body('password').notEmpty().withMessage('Contraseña requerida')
 ];
 
-// ✅ CORREGIDO: Generar JWT con estructura consistente
+// Generar JWT con estructura consistente
 const generateToken = (userId, role) => {
   return jwt.sign(
-    { userId, role }, // ✅ Usar userId (no id) para consistencia con middleware
+    { userId, role }, 
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
   );
 };
 
-// POST /api/auth/register - Registro de usuario
+//Registro de usuario
 router.post('/register', registerValidation, async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -113,7 +113,7 @@ router.post('/register', registerValidation, async (req, res) => {
   }
 });
 
-// ✅ CORREGIDO: POST /api/auth/login - Inicio de sesión
+// POST /api/auth/login - Inicio de sesión
 router.post('/login', loginValidation, async (req, res) => {
   try {
     console.log('📧 Intentando login con:', { email: req.body.email });
@@ -146,7 +146,7 @@ router.post('/login', loginValidation, async (req, res) => {
 
     console.log('✅ Usuario encontrado:', { id: user.id, email: user.email, isActive: user.isActive });
 
-    // ✅ AGREGADO: Verificar si está activo
+    // Verificar si está activo
     if (!user.isActive) {
       console.log('❌ Usuario inactivo');
       return res.status(401).json({ 
@@ -172,7 +172,7 @@ router.post('/login', loginValidation, async (req, res) => {
     const token = generateToken(user.id, user.role);
     console.log('🎫 Token generado exitosamente');
 
-    // ✅ CORREGIDO: Actualizar último login de forma segura
+    // Actualizar último login de forma segura
     try {
       await prisma.user.update({
         where: { id: user.id },
@@ -211,7 +211,7 @@ router.post('/login', loginValidation, async (req, res) => {
   }
 });
 
-// ✅ CORREGIDO: POST /api/auth/verify - Verificar token
+// POST /api/auth/verify - Verificar token
 router.post('/verify', async (req, res) => {
   try {
     const authHeader = req.headers['authorization'];
@@ -226,7 +226,7 @@ router.post('/verify', async (req, res) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    // ✅ CORREGIDO: Usar decoded.userId (consistente con generateToken)
+    // Usar decoded.userId (consistente con generateToken)
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
       select: {

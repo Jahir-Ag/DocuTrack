@@ -4,7 +4,7 @@ import Button from '../common/Button';
 import LoadingSpinner from '../common/LoadingSpinner';
 import { useRequests } from '../../hooks/useRequests';
 
-// ✅ Constantes definidas localmente (temporal)
+// ✅ Constantes definidas localmente 
 const CERTIFICATE_TYPES = {
   NACIMIENTO: 'Certificado de Nacimiento',
   ESTUDIOS: 'Certificado de Estudios',
@@ -12,7 +12,7 @@ const CERTIFICATE_TYPES = {
   ANTECEDENTES: 'Certificado de Antecedentes'
 };
 
-// ✅ Validación simple (temporal)
+// ✅ Validación simple 
 const validateRequestForm = (formData, selectedFile) => {
   const errors = {};
   
@@ -32,7 +32,6 @@ const validateRequestForm = (formData, selectedFile) => {
 
 const RequestForm = ({ certificateType, onSuccess, onCancel }) => {
   const navigate = useNavigate();
-  // ✅ CORREGIDO: usar 'loading' en lugar de 'isLoading'
   const { createRequest, loading } = useRequests();
   
   const [formData, setFormData] = useState({

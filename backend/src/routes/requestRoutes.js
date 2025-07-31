@@ -10,13 +10,13 @@ const { generateCertificatePDF } = require('../utils/pdfGenerator');
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// ✅ VALIDACIONES CORREGIDAS - Agregar todos los campos requeridos
+// Agregar todos los campos requeridos
 const requestValidation = [
   body('certificateType')
     .isIn(['NACIMIENTO', 'ESTUDIOS', 'RESIDENCIA', 'ANTECEDENTES'])
     .withMessage('Tipo de certificado inválido'),
   
-  // ✅ AGREGAR VALIDACIONES PARA CAMPOS PERSONALES
+  // AGREGAR VALIDACIONES PARA CAMPOS PERSONALES
   body('firstName')
     .trim()
     .isLength({ min: 2, max: 50 })
@@ -67,7 +67,7 @@ const requestValidation = [
     .withMessage('Urgencia inválida')
 ];
 
-// ✅ IMPORTANTE: GET /api/requests/all DEBE IR PRIMERO (antes que /:id)
+
 // GET /api/requests/all - Obtener TODAS las solicitudes (solo admin)
 router.get('/all', requireUser, async (req, res) => {
   try {

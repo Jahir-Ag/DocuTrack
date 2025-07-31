@@ -10,10 +10,8 @@ export const useDownload = () => {
       setDownloading(true);
       setError(null);
       
-      // ✅ CORREGIDO: certificateService ya devuelve un Blob
       const blob = await certificateService.downloadCertificate(requestId);
       
-      // ✅ CORREGIDO: Usar el blob directamente, no response.data
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -38,7 +36,7 @@ export const useDownload = () => {
       setDownloading(true);
       setError(null);
       
-      // ✅ CORREGIDO: Si downloadDocument también devuelve blob directamente
+      // ✅ Si downloadDocument también devuelve blob directamente
       const blob = await certificateService.downloadDocument(filename);
       
       const url = window.URL.createObjectURL(blob);

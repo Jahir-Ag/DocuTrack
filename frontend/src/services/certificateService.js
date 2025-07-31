@@ -9,8 +9,7 @@ export const certificateService = {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          // ✅ REMOVER Content-Type para descargas de archivos
-          // 'Content-Type': 'application/json'  // ← QUITAR ESTA LÍNEA
+         
         }
       });
       

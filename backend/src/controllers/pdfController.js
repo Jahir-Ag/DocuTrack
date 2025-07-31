@@ -10,7 +10,7 @@ try {
 } catch (error) {
   console.warn('⚠️ pdfGenerator no encontrado, usando función mock');
   generateCertificatePDF = async (request) => {
-    // Mock function para desarrollo
+    
     const mockPDF = Buffer.from(`Mock PDF para solicitud ${request.requestNumber}`);
     return mockPDF;
   };

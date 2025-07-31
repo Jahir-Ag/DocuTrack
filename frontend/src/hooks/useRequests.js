@@ -13,7 +13,7 @@ export const useRequests = (initialFilters = {}) => {
   });
   const [filters, setFilters] = useState(initialFilters);
 
-  // ✅ MEMOIZAR loadRequests con useCallback
+  // ✅ MEMORIZAR loadRequests con useCallback
   const loadRequests = useCallback(async (page = 1, newFilters = {}) => {
     setLoading(true);
     setError(null);
@@ -40,7 +40,7 @@ export const useRequests = (initialFilters = {}) => {
     }
   }, [filters, pagination.limit]);
 
-  // ✅ NUEVA FUNCIÓN: fetchAllRequests para admin
+  // ✅ fetchAllRequests para admin
   const fetchAllRequests = useCallback(async (page = 1, newFilters = {}) => {
     setLoading(true);
     setError(null);
@@ -140,7 +140,7 @@ export const useRequests = (initialFilters = {}) => {
     loadRequests(pagination.page);
   }, [loadRequests, pagination.page]);
 
-  // ✅ CARGAR AL MONTAR - AHORA SÍ FUNCIONA CORRECTAMENTE
+  // ✅ CARGAR AL MONTAR 
   useEffect(() => {
     loadRequests();
   }, [loadRequests]);
@@ -159,6 +159,6 @@ export const useRequests = (initialFilters = {}) => {
     changePage,
     refresh,
     loadRequests,
-    fetchAllRequests // ✅ EXPORTAR LA NUEVA FUNCIÓN
+    fetchAllRequests 
   };
 };

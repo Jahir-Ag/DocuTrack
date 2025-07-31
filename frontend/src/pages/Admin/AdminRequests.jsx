@@ -12,7 +12,7 @@ const AdminRequests = () => {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   
-  // ✅ CORREGIDO: Estado local en lugar de useRequests
+  // ✅Estado local en lugar de useRequests
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -25,7 +25,7 @@ const AdminRequests = () => {
     sortOrder: 'desc'
   });
 
-  // ✅ CORREGIDO: Función que usa el servicio de admin
+  // ✅Función que usa el servicio de admin
   const fetchAllRequests = async () => {
     try {
       setLoading(true);

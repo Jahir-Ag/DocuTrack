@@ -1,7 +1,7 @@
 import api from './api';
 
 export const requestService = {
-  // ✅ MÉTODO EXISTENTE: Crear nueva solicitud
+ 
   createRequest: async (requestData) => {
     try {
       const formData = new FormData();
@@ -11,7 +11,7 @@ export const requestService = {
       formData.append('reason', requestData.reason);
       formData.append('urgency', requestData.urgency || 'NORMAL');
       
-      // ✅ CORREGIDO: Mapear campos correctos del schema
+      // ✅Mapear campos correctos del schema
       formData.append('firstName', requestData.firstName);
       formData.append('lastName', requestData.lastName);
       formData.append('email', requestData.email);
@@ -42,7 +42,7 @@ export const requestService = {
     }
   },
 
-  // ✅ MÉTODO EXISTENTE: Obtener solicitudes del usuario
+  // ✅Obtener solicitudes del usuario
   getUserRequests: async () => {
     try {
       const response = await api.get('/requests');
@@ -53,7 +53,7 @@ export const requestService = {
     }
   },
 
-  // ✅ ALIAS FALTANTE: getMyRequests (mismo que getUserRequests)
+  // ✅getMyRequests (mismo que getUserRequests)
   getMyRequests: async () => {
     try {
       const response = await api.get('/requests');
@@ -64,7 +64,7 @@ export const requestService = {
     }
   },
 
-  // ✅ MÉTODO EXISTENTE: Obtener solicitud específica del usuario
+  // ✅Obtener solicitud específica del usuario
   getRequestById: async (id) => {
     try {
       const response = await api.get(`/requests/${id}`);
@@ -75,7 +75,7 @@ export const requestService = {
     }
   },
 
-  // ✅ NUEVO MÉTODO: Obtener todas las solicitudes para admin
+  // ✅Obtener todas las solicitudes para admin
   getAdminRequests: async (params = {}) => {
     try {
       const queryParams = new URLSearchParams();
@@ -109,7 +109,7 @@ export const requestService = {
     }
   },
 
-  // ✅ NUEVO MÉTODO: Obtener solicitud específica para admin
+  // ✅ Obtener solicitud específica para admin
   getAdminRequestById: async (id) => {
     try {
       const response = await api.get(`/admin/requests/${id}`);
@@ -120,7 +120,7 @@ export const requestService = {
     }
   },
 
-  // ✅ NUEVO MÉTODO: Actualizar estado de solicitud (solo admin)
+  // ✅ Actualizar estado de solicitud (solo admin)
   updateRequestStatus: async (id, status, comment = '') => {
     try {
       const response = await api.patch(`/admin/requests/${id}/status`, {
@@ -134,7 +134,7 @@ export const requestService = {
     }
   },
 
-  // ✅ NUEVO MÉTODO: Obtener estadísticas del dashboard admin
+  // ✅ Obtener estadísticas del dashboard admin
   getAdminStats: async () => {
     try {
       const response = await api.get('/admin/dashboard/stats');
@@ -145,7 +145,7 @@ export const requestService = {
     }
   },
 
-  // ✅ NUEVO MÉTODO: Descargar documento (admin)
+  // ✅ Descargar documento (admin)
   downloadDocument: async (requestId) => {
     try {
       const response = await api.get(`/admin/requests/${requestId}/document`, {

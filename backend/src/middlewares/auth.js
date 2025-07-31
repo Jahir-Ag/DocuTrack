@@ -122,10 +122,10 @@ const optionalAuth = async (req, res, next) => {
       select: {
         id: true,
         email: true,
-        firstName: true,  // ✅ CAMBIADO: name -> firstName
-        lastName: true,   // ✅ AGREGADO: lastName
-        nationalId: true, // ✅ AGREGADO: nationalId
-        phone: true,      // ✅ AGREGADO: phone
+        firstName: true, 
+        lastName: true,  
+        nationalId: true,
+        phone: true, 
         role: true,
         createdAt: true,
         updatedAt: true
@@ -146,10 +146,10 @@ const optionalAuth = async (req, res, next) => {
 // También exportar como authenticateToken para compatibilidad
 const authenticateToken = auth;
 
-// ✅ AGREGADO: Alias requireUser que es lo que necesita requestRoutes.js
+//Alias requireUser para requestRoutes.js
 const requireUser = auth;
 
-// ✅ SOLUCION: Crear requireAdmin usando requireRole
+//Crear requireAdmin usando requireRole
 const requireAdmin = requireRole(['ADMIN']);
 
 module.exports = {
@@ -158,5 +158,5 @@ module.exports = {
   requireRole,
   optionalAuth,
   requireUser,
-  requireAdmin  // ✅ AGREGADO: Ahora exporta requireAdmin
+  requireAdmin  
 };

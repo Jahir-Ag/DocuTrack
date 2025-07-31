@@ -82,7 +82,6 @@ const RequestDetails = () => {
   };
 
   const getStatusHistory = () => {
-    // Esto sería ideal tenerlo en el backend, pero por simplicidad lo simulamos
     const history = [
       {
         status: 'PENDING',

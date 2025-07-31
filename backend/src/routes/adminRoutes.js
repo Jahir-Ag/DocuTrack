@@ -11,7 +11,7 @@ const prisma = new PrismaClient();
 router.use(authenticateToken);
 router.use(requireRole(['ADMIN'])); 
 
-// GET /api/admin/requests - Obtener todas las solicitudes
+// Obtener todas las solicitudes
 router.get('/requests', async (req, res) => {
   try {
     const { 
@@ -133,7 +133,7 @@ router.get('/requests', async (req, res) => {
   }
 });
 
-// GET /api/admin/requests/:id - Obtener solicitud específica con detalles completos
+// Obtener solicitud específica con detalles completos
 router.get('/requests/:id', async (req, res) => {
   try {
     const request = await prisma.certificateRequest.findUnique({
@@ -198,7 +198,7 @@ router.get('/requests/:id', async (req, res) => {
   }
 });
 
-// ✅ PATCH /api/admin/requests/:id/status - Cambiar estado de solicitud (REST-compliant)
+// Cambiar estado de solicitud (REST-compliant)
 router.patch('/requests/:id/status', [
   body('status').isIn(['RECIBIDO', 'EN_VALIDACION', 'OBSERVADO', 'APROBADO', 'EMITIDO', 'RECHAZADO'])
     .withMessage('Estado inválido'),
@@ -302,7 +302,7 @@ router.patch('/requests/:id/status', [
   }
 });
 
-// ✅ GET /api/admin/requests/:id/document - Descarga directa del documento (para AdminRequestDetail)
+// Descarga directa del documento (para AdminRequestDetail)
 router.get('/requests/:id/document', async (req, res) => {
   try {
     const { id: requestId } = req.params;
@@ -351,7 +351,7 @@ router.get('/requests/:id/document', async (req, res) => {
   }
 });
 
-// GET /api/admin/requests/:id/documents/:docId - Descargar documento específico por ID
+//Descargar documento específico por ID
 router.get('/requests/:id/documents/:docId', async (req, res) => {
   try {
     const { id: requestId, docId } = req.params;
@@ -408,7 +408,7 @@ router.get('/requests/:id/documents/:docId', async (req, res) => {
   }
 });
 
-// GET /api/admin/dashboard/stats - Estadísticas específicas para dashboard admin
+//Estadísticas específicas para dashboard admin
 router.get('/dashboard/stats', async (req, res) => {
   try {
     const [
@@ -500,7 +500,7 @@ router.get('/dashboard/stats', async (req, res) => {
   }
 });
 
-// GET /api/admin/dashboard - Dashboard con estadísticas generales (mantener compatibilidad)
+//Dashboard con estadísticas generales (mantener compatibilidad)
 router.get('/dashboard', async (req, res) => {
   try {
     const [

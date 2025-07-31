@@ -130,9 +130,9 @@ const cleanupFiles = async (files) => {
 
 module.exports = {
   upload,
-  uploadDocument,    // Nuevo: para un solo documento
+  uploadDocument,   
   handleMulterError,
-  validateFile,      // Nuevo: para validar un solo archivo
-  cleanupFile,       // Nuevo: para limpiar un solo archivo
-  cleanupFiles       // Mantenido para retrocompatibilidad
+  validateFile,     
+  cleanupFile,      
+  cleanupFiles      
 };

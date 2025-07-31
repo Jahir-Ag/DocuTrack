@@ -9,7 +9,6 @@ import { formatDate } from '../utils/formatters';
 
 const MyRequests = () => {
   const navigate = useNavigate();
-  // ✅ CORREGIDO: Usar loadRequests en lugar de fetchRequests
   const { requests, loading, loadRequests, error } = useRequests();
   const [filteredRequests, setFilteredRequests] = useState([]);
   const [filters, setFilters] = useState({
@@ -18,12 +17,6 @@ const MyRequests = () => {
     sortBy: 'newest'
   });
   const [searchTerm, setSearchTerm] = useState('');
-
-  // ✅ CORREGIDO: Ya no necesitas este useEffect porque loadRequests 
-  // se ejecuta automáticamente en el hook useRequests
-  // useEffect(() => {
-  //   loadRequests();
-  // }, []);
 
   useEffect(() => {
     let filtered = [...requests];
@@ -103,7 +96,7 @@ const MyRequests = () => {
     navigate(`/request/${requestId}`);
   };
 
-  // ✅ AGREGADO: Manejo de errores
+  // ✅Manejo de errores
   if (error) {
     return (
       <div className="flex flex-col justify-center items-center min-h-96">

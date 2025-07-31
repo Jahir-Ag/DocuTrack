@@ -5,7 +5,7 @@ import axios from 'axios';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 const api = axios.create({
-  baseURL: API_BASE_URL, // ✅ CORREGIDO: Usar la variable de entorno
+  baseURL: API_BASE_URL, 
   headers: {
     'Content-Type': 'application/json',
   },
@@ -19,7 +19,7 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    // ✅ AGREGADO: Log para debugging
+    // ✅Log para debugging
     console.log(`🌐 API Request: ${config.method?.toUpperCase()} ${config.baseURL}${config.url}`);
     
     return config;
@@ -33,12 +33,12 @@ api.interceptors.request.use(
 // Interceptor para manejar respuestas y errores
 api.interceptors.response.use(
   (response) => {
-    // ✅ AGREGADO: Log para debugging
+    // ✅Log para debugging
     console.log(`✅ API Response: ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`);
     return response;
   },
   (error) => {
-    // ✅ MEJORADO: Mejor logging de errores
+    // ✅ logging de errores
     console.error('❌ API Error:', {
       status: error.response?.status,
       method: error.config?.method?.toUpperCase(),

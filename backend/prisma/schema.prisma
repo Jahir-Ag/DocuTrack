@@ -63,7 +63,7 @@ model CertificateRequest {
   urgency         UrgencyLevel    @default(NORMAL)
   status          RequestStatus   @default(RECIBIDO)
 
-  // ✅ NUEVOS CAMPOS AGREGADOS - Información personal del solicitante
+  // ✅ Información personal del solicitante
   firstName       String          // Nombre del solicitante
   lastName        String          // Apellido del solicitante
   email           String          // Email del solicitante

@@ -30,22 +30,21 @@ const RequestDetail = () => {
     
     const response = await requestService.getRequestById(id);
     
-    // ✅ CORRECCIÓN: response ya es { request: {...} }
     setRequest(response.request);
     
     // Simular historial de estados
     const mockHistory = [
       {
         status: 'RECIBIDO',
-        date: response.request.createdAt,  // ✅ CORRECCIÓN: response.request
+        date: response.request.createdAt,
         comment: 'Solicitud recibida correctamente'
       }
     ];
     
-    if (response.request.status !== 'RECIBIDO') {  // ✅ CORRECCIÓN: response.request
+    if (response.request.status !== 'RECIBIDO') { 
       mockHistory.push({
-        status: response.request.status,           // ✅ CORRECCIÓN: response.request
-        date: response.request.updatedAt,          // ✅ CORRECCIÓN: response.request
+        status: response.request.status,          
+        date: response.request.updatedAt,         
         comment: 'Estado actualizado por el administrador'
       });
     }
