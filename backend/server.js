@@ -10,7 +10,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const allowedOrigins = [
-  process.env.FRONTEND_URL?.replace(/\/$/, '') || 'https://docu-track-beta.vercel.app'
+   process.env.FRONTEND_URL || 'https://docu-track-beta.vercel.app'
 ];
 
 /*
