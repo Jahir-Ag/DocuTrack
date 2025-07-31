@@ -48,15 +48,13 @@ app.use('/api/pdf', pdfRoutes);
 async function startServer() {
   try {
     await initializeDatabase();
-    const PORT = process.env.PORT || 3001;
-    app.listen(PORT, () => {
-      console.log(`🚀 Servidor escuchando en puerto ${PORT}`);
-    });
+    
   } catch (error) {
     console.error('💥 Error en inicializaciones:', error);
     process.exit(1);
   }
 }
+
 
 startServer();
 
