@@ -10,9 +10,15 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  process.env.APP_URL
+];
+
+/*
+const allowedOrigins = [
   'https://docu-track-beta.vercel.app',
   'https://docutrack-production.up.railway.app'
-];
+]; */
 
 app.use(cors({
   origin: allowedOrigins,
