@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "description": "Backend para DocuTrack - Sistema de gestión de trámites y certificados",
   "main": "server.js",
- "scripts": {
+  "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
     "postinstall": "prisma generate",
     "db:migrate": "npx prisma migrate dev",
-    "db:generate": "npx prisma generate", 
+    "db:generate": "npx prisma generate",
     "db:push": "npx prisma db push",
     "db:studio": "npx prisma studio",
     "db:seed": "node prisma/seed.js"
@@ -23,12 +23,12 @@
   "author": "Tu Nombre",
   "license": "MIT",
   "dependencies": {
+    "@prisma/client": "^6.12.0",
     "bcrypt": "^6.0.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^4.21.2",
-    "@prisma/client": "^6.12.0",
     "express-rate-limit": "^7.5.1",
     "express-validator": "^7.2.1",
     "helmet": "^7.2.0",
