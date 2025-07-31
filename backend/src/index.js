@@ -1,16 +1,44 @@
-// src/index.js - Solo inicializaciones, SIN servidor
 require('dotenv').config();
+const { PrismaClient } = require('@prisma/client');
 
-// Aquí van las inicializaciones que necesites:
-// - Conexión a base de datos (Prisma, MongoDB, etc.)
-// - Configuración de jobs/cron
-// - Configuración de servicios externos
-// - Cache (Redis, etc.)
-// - Websockets si los usas
-// - Cualquier otra inicialización
+// Inicializar Prisma
+const prisma = new PrismaClient({
+  log: ['error', 'warn'],
+});
 
-console.log('✅ Inicializaciones de DocuTrack completadas');
+// Función para conectar a la base de datos
+async function initializeDatabase() {
+  try {
+    console.log('🔌 Conectando a la base de datos...');
+    
+    // Probar la conexión
+    await prisma.$connect();
+    console.log('✅ Base de datos conectada exitosamente');
+    
+    // Opcional: hacer una query de prueba
+    const userCount = await prisma.user.count();
+    console.log(`📊 Usuarios en BD: ${userCount}`);
+    
+  } catch (error) {
+    console.error('❌ Error conectando a la base de datos:', error.message);
+    console.error('🔍 DATABASE_URL:', process.env.DATABASE_URL ? 'Configurada' : 'NO CONFIGURADA');
+    throw error;
+  }
+}
 
-// IMPORTANTE: NO crear servidor aquí
-// IMPORTANTE: NO usar app.listen()
-// El servidor se maneja completamente en server.js
+// Inicializar todo
+async function initialize() {
+  try {
+    await initializeDatabase();
+    console.log('✅ Inicializaciones de DocuTrack completadas');
+  } catch (error) {
+    console.error('💥 Error en inicializaciones:', error);
+    process.exit(1); // Fallar el deploy si no puede conectar a BD
+  }
+}
+
+// Ejecutar inicializaciones
+initialize();
+
+// Exportar prisma para uso en otras partes
+module.exports = { prisma };
