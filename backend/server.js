@@ -6,8 +6,21 @@ const morgan = require('morgan');
 const path = require('path');
 require('dotenv').config();
 
-// Inicializaciones propias (DB, jobs, etc.) - SIN servidor
-require('./src/index');
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+const allowedOrigins = [
+  'https://docu-track-beta.vercel.app',
+  'https://docutrack-production.up.railway.app'
+];
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 
 // Importar rutas
 const authRoutes = require('./src/routes/authRoutes');
@@ -16,9 +29,6 @@ const requestRoutes = require('./src/routes/requestRoutes');
 const adminRoutes = require('./src/routes/adminRoutes');
 const pdfRoutes = require('./src/routes/pdfRoutes');
 
-const app = express();
-const PORT = process.env.PORT || 3000;
-
 // Seguridad
 app.use(helmet());
 
@@ -26,19 +36,8 @@ app.use(helmet());
 app.use(morgan('combined'));
 
 // CORS simplificado y limpio
-const allowedOrigins = [
-  'https://docu-track-beta.vercel.app',
-  'https://docutrack-production.up.railway.app'
-];
 
 console.log('🔗 CORS configurado para:', allowedOrigins);
-
-app.use(cors({
-  origin: allowedOrigins,
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
 
 // Rate limiting
 const limiter = rateLimit({
@@ -141,6 +140,9 @@ process.on('SIGINT', () => {
     process.exit(0);
   });
 });
+
+// Inicializaciones propias (DB, jobs, etc.) - SIN servidor
+require('./src/index');
 
 // Iniciar servidor
 const server = app.listen(PORT, '0.0.0.0', () => {
