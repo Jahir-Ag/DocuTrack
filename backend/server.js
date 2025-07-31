@@ -20,19 +20,6 @@ const allowedOrigins = [
 ]; 
 */
 
-
-const cors = require('cors');
-
-const corsOptions = {
-  origin: 'https://docu-track-beta.vercel.app', // Tu dominio frontend
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true,
-};
-
-app.use(cors(corsOptions));
-
-
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
