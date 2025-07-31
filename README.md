@@ -120,6 +120,15 @@ Los certificados emitidos se generan como archivos PDF personalizados con los da
 
 ---
 
+## Despliegue
+
+- [DocuTrack](https://docu-track-beta.vercel.app/)
+- Despliegue
+- Frontend: Vercel
+- Backend: Railway
+- Base de datos: PostgreSQL
+
+
 ## 🤝 Autor
 
 - [Jahir Agudo](https://github.com/Jahir-Ag)
