@@ -17,7 +17,9 @@ const allowedOrigins = [
 const allowedOrigins = [
   'https://docu-track-beta.vercel.app',
   'https://docutrack-production.up.railway.app'
-]; */
+]; 
+
+*/
 
 app.use(cors({
   origin: function (origin, callback) {
