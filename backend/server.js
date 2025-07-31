@@ -33,6 +33,12 @@ app.use(cors({
 }));
 app.use(express.json());
 
+app.options('*', cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
+
+
 // Importar rutas
 const authRoutes = require('./src/routes/authRoutes');
 const userRoutes = require('./src/routes/userRoutes');
