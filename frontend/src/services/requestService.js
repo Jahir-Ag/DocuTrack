@@ -4,36 +4,20 @@ export const requestService = {
  
   createRequest: async (requestData) => {
     try {
-      const formData = new FormData();
+      // ✅ requestData YA ES FormData completo desde RequestForm, no reconstruir
+      console.log('📤 Enviando FormData directo al backend...');
       
-      // Campos principales
-      formData.append('certificateType', requestData.certificateType || '');
-      formData.append('reason', requestData.reason || '');
-      formData.append('urgency', requestData.urgency || 'NORMAL');
-      
-      // ✅Mapear campos correctos del schema
-      formData.append('firstName', requestData.firstName || '');
-      formData.append('lastName', requestData.lastName || '');
-      formData.append('email', requestData.email || '');
-      formData.append('phone', requestData.phone || '');
-      formData.append('cedula', requestData.cedula || '');
-      formData.append('birthDate', requestData.birthDate || '');
-      formData.append('address', requestData.address || '');
-      
-      if (requestData.additionalInfo) {
-        formData.append('additionalInfo', requestData.additionalInfo);
+      // 🔍 Debug: Ver qué contiene el FormData antes de enviar
+      console.log('📋 FormData contents:');
+      for (let [key, value] of requestData.entries()) {
+        if (value instanceof File) {
+          console.log(`${key}: File(${value.name}, ${value.size} bytes, ${value.type})`);
+        } else {
+          console.log(`${key}:`, value);
+        }
       }
-      
-      // Documento
-    if (requestData.document && requestData.document instanceof File) {
-      formData.append('document', requestData.document);
-      console.log('✅ Archivo agregado:', requestData.document.name);
-    } else {
-      console.error('❌ No hay archivo válido:', requestData.document);
-      throw new Error('Debe seleccionar un archivo PDF o JPG');
-    }
 
-      const response = await api.post('/requests', formData, {
+      const response = await api.post('/requests', requestData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -188,5 +172,38 @@ export const requestService = {
   // ✅ MÉTODO AUXILIAR: Obtener URL de descarga directa
   getDocumentDownloadUrl: (requestId) => {
     return `${api.defaults.baseURL}/admin/requests/${requestId}/document`;
+  },
+
+  // ✅ Actualizar solicitud (método que faltaba en mi versión anterior)
+  updateRequest: async (id, data) => {
+    try {
+      const response = await api.patch(`/requests/${id}`, data);
+      return response.data;
+    } catch (error) {
+      console.error('Error updating request:', error);
+      throw error;
+    }
+  },
+
+  // ✅ Cancelar solicitud (método que faltaba en mi versión anterior)
+  cancelRequest: async (id) => {
+    try {
+      const response = await api.delete(`/requests/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error canceling request:', error);
+      throw error;
+    }
+  },
+
+  // ✅ Obtener tipos de certificados disponibles
+  getCertificateTypes: async () => {
+    try {
+      const response = await api.get('/requests/certificate-types');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching certificate types:', error);
+      throw error;
+    }
   }
 };

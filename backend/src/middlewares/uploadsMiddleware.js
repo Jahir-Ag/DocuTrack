@@ -48,10 +48,11 @@ const fileFilter = (req, file, cb) => {
   const allowedTypes = [
     'application/pdf',
     'image/jpeg',
-    'image/jpg'
+    'image/jpg',
+    'image/png'  // ✅ Agregué PNG que faltaba
   ];
   
-  const allowedExtensions = ['.pdf', '.jpg', '.jpeg'];
+  const allowedExtensions = ['.pdf', '.jpg', '.jpeg', '.png'];
   const fileExtension = path.extname(file.originalname).toLowerCase();
   
   if (allowedTypes.includes(file.mimetype) && allowedExtensions.includes(fileExtension)) {
@@ -59,7 +60,7 @@ const fileFilter = (req, file, cb) => {
     cb(null, true);
   } else {
     console.log(`❌ Archivo inválido: ${file.originalname}`);
-    cb(new Error('Solo se permiten archivos PDF y JPG'), false);
+    cb(new Error('Solo se permiten archivos PDF, JPG y PNG'), false);
   }
 };
 
@@ -122,7 +123,7 @@ const handleMulterError = (error, req, res, next) => {
   next(error);
 };
 
-// Middleware para validar que se subió un archivo
+// ✅ MIDDLEWARE CORREGIDO: Adaptar req.file a req.files para el controller
 const validateFile = (req, res, next) => {
   console.log('🔍 Validando archivo recibido...');
   console.log('📋 req.file:', req.file);
@@ -132,19 +133,24 @@ const validateFile = (req, res, next) => {
     console.log('❌ No se recibió archivo');
     return res.status(400).json({
       success: false,
-      error: 'Se requiere un documento (PDF o JPG)'
+      error: 'Se requiere un documento (PDF, JPG o PNG)'
     });
   }
   
-  console.log('✅ Archivo validado correctamente');
+  // ✅ CONVERSIÓN CRÍTICA: Controller espera req.files (array)
+  // Convertir req.file (single) a req.files (array) para compatibilidad
+  req.files = [req.file];
+  console.log('✅ Archivo convertido a req.files para compatibilidad con controller');
+  console.log('📋 req.files:', req.files);
+  
   next();
 };
 
 // Middleware combinado para documento único
 const uploadDocument = [
-  upload.single('document'), // Campo 'document' del FormData
+  upload.single('document'), // ✅ Campo 'document' del FormData (single file)
   handleMulterError,
-  validateFile
+  validateFile  // ✅ Incluye la conversión req.file -> req.files
 ];
 
 // Función helper para limpiar archivo en caso de error
