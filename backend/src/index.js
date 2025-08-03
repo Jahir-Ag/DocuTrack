@@ -9,11 +9,6 @@ const prisma = new PrismaClient({
   log: ['error', 'warn'],
 });
 
-// Middlewares
-app.use(cors({
-  origin: 'https://docu-track-beta.vercel.app', // o '*' en desarrollo
-  credentials: true,
-}));
 app.use(express.json());
 
 // Conexión a la base de datos

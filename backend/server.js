@@ -10,18 +10,15 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const allowedOrigins = [
-   process.env.FRONTEND_URL || 'https://docu-track-beta.vercel.app'
+  process.env.FRONTEND_URL || 'https://docu-track-beta.vercel.app',
+  'http://localhost:3000',  // para desarrollo local
+  'http://localhost:3001',  // por si usas otro puerto
+  'http://localhost:5173',  // para Vite
 ];
-
-/*
-const allowedOrigins = [
-  'https://docu-track-beta.vercel.app',
-  'https://docutrack-production.up.railway.app'
-]; 
-*/
 
 app.use(cors({
   origin: function (origin, callback) {
+    // Permitir requests sin origin (como Postman, apps móviles, etc.)
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -32,6 +29,7 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
 app.use(express.json());
 
 app.options('*', cors({
