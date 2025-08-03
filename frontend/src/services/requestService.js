@@ -7,27 +7,31 @@ export const requestService = {
       const formData = new FormData();
       
       // Campos principales
-      formData.append('certificateType', requestData.certificateType);
-      formData.append('reason', requestData.reason);
+      formData.append('certificateType', requestData.certificateType || '');
+      formData.append('reason', requestData.reason || '');
       formData.append('urgency', requestData.urgency || 'NORMAL');
       
       // ✅Mapear campos correctos del schema
-      formData.append('firstName', requestData.firstName);
-      formData.append('lastName', requestData.lastName);
-      formData.append('email', requestData.email);
-      formData.append('phone', requestData.phone);
-      formData.append('cedula', requestData.cedula);
-      formData.append('birthDate', requestData.birthDate);
-      formData.append('address', requestData.address);
+      formData.append('firstName', requestData.firstName || '');
+      formData.append('lastName', requestData.lastName || '');
+      formData.append('email', requestData.email || '');
+      formData.append('phone', requestData.phone || '');
+      formData.append('cedula', requestData.cedula || '');
+      formData.append('birthDate', requestData.birthDate || '');
+      formData.append('address', requestData.address || '');
       
       if (requestData.additionalInfo) {
         formData.append('additionalInfo', requestData.additionalInfo);
       }
       
       // Documento
-      if (requestData.document) {
-        formData.append('document', requestData.document);
-      }
+    if (requestData.document && requestData.document instanceof File) {
+      formData.append('document', requestData.document);
+      console.log('✅ Archivo agregado:', requestData.document.name);
+    } else {
+      console.error('❌ No hay archivo válido:', requestData.document);
+      throw new Error('Debe seleccionar un archivo PDF o JPG');
+    }
 
       const response = await api.post('/requests', formData, {
         headers: {
