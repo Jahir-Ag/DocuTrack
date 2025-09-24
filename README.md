@@ -1,137 +1,106 @@
-# DocuTrack
+DocuTrack
 
-**DocuTrack** es una plataforma web diseñada para digitalizar, agilizar y centralizar el proceso de solicitud, seguimiento y emisión de certificados oficiales. Ofrece una experiencia fluida tanto para ciudadanos como para administradores, optimizando la tramitación de documentos desde cualquier lugar.
+DocuTrack is a web platform designed to digitize, streamline, and centralize the process of requesting, tracking, and issuing official certificates. It provides a smooth experience for both citizens and administrators, optimizing document processing from anywhere.
 
----
+🌐 Production Demo
 
-## 🌐 Demo en Producción
+Frontend: Deployed on Vercel
 
-- **Frontend:** Desplegado en Vercel
-- **Backend API:** Desplegado en Railway
+Backend API: Deployed on Railway
 
----
+📌 Key Features
+For Citizens
 
-## 📌 Características Principales
+Secure Registration and Login with JWT-based authentication.
 
-### Para Ciudadanos
+Certificate request form with file upload support (PDF/JPG).
 
-- **Registro y Login seguro** con autenticación basada en JWT.
-- **Formulario de solicitud** de certificados con carga de archivos adjuntos (PDF/JPG).
-- **Seguimiento del estado del trámite** en tiempo real (`Recibido → En Validación → Emitido`).
-- **Descarga automática del certificado en PDF** una vez aprobado.
+Real-time tracking of request status (Received → Under Validation → Issued).
 
-### Para Administradores
+Automatic PDF download of the certificate once approved.
 
-- **Panel de gestión de trámites** con lista completa de solicitudes.
-- **Revisión detallada de cada trámite**, con acceso a datos del solicitante y documentos.
-- **Acciones administrativas**: Aprobar, Rechazar o Solicitar correcciones, lo que actualiza el estado para el usuario.
+For Administrators
 
----
+Management dashboard with a complete list of requests.
 
-## ⚙️ Tecnologías Utilizadas
+Detailed review of each request, with access to applicant data and documents.
 
-| Capa       | Tecnología             | Justificación                                                                 |
-|------------|------------------------|------------------------------------------------------------------------------|
-| Frontend   | React.js               | Librería moderna, modular y eficiente para SPAs.                            |
-| Backend    | Node.js + Express      | Ligero, rápido y ampliamente utilizado para servicios REST.                 |
-| ORM        | Prisma ORM             | Abstracción robusta para PostgreSQL con tipado fuerte y migraciones seguras.|
-| Base de Datos | PostgreSQL          | SGBD relacional robusto y escalable.                                        |
-| Autenticación | JWT                 | Para proteger rutas y manejar sesiones seguras.                             |
-| Generación PDF | pdf-lib (u otra)   | Para generar certificados dinámicamente con datos del solicitante.          |
-| Despliegue Frontend | Vercel        | CI/CD sencillo y escalabilidad automática.                                  |
-| Despliegue Backend | Railway        | Hosting eficiente con soporte PostgreSQL integrado.                         |
+Administrative actions: Approve, Reject, or Request corrections, automatically updating the status for the user.
 
----
-
-## 🗂️ Estructura del Proyecto
-
-```
+⚙️ Technologies Used
+Layer	Technology	Reason
+Frontend	React.js	Modern, modular, and efficient library for SPAs.
+Backend	Node.js + Express	Lightweight, fast, and widely used for REST services.
+ORM	Prisma ORM	Strong abstraction for PostgreSQL with type safety and secure migrations.
+Database	PostgreSQL	Robust and scalable relational DBMS.
+Authentication	JWT	To secure routes and manage sessions safely.
+PDF Generation	pdf-lib (or similar)	To dynamically generate certificates with applicant data.
+Frontend Deployment	Vercel	Simple CI/CD and automatic scalability.
+Backend Deployment	Railway	Efficient hosting with built-in PostgreSQL support.
+🗂️ Project Structure
 DocuTrack/
 │
-├── backend/               # API REST (Node.js + Express + Prisma)
-│   ├── server.js          # Entrada principal del servidor
-│   ├── db.js              # Conexión con la base de datos
-│   ├── prisma/            # Esquema Prisma y migraciones
-│   └── routes/            # Endpoints para usuarios, admins y trámites
+├── backend/               # REST API (Node.js + Express + Prisma)
+│   ├── server.js          # Main server entry point
+│   ├── db.js              # Database connection
+│   ├── prisma/            # Prisma schema and migrations
+│   └── routes/            # Endpoints for users, admins, and requests
 │
-└── frontend/              # Aplicación React
-    ├── components/        # Componentes reutilizables
-    ├── pages/             # Rutas de usuario y administrador
-    └── services/          # Lógica de conexión con la API
-```
+└── frontend/              # React application
+    ├── components/        # Reusable components
+    ├── pages/             # User and admin routes
+    └── services/          # API connection logic
 
----
+🛠️ Installation and Local Setup
+Requirements
 
-## 🛠️ Instalación y Ejecución Local
+Node.js (v18+)
 
-### Requisitos
+PostgreSQL
 
-- Node.js (v18+)
-- PostgreSQL
-- npm o yarn
+npm or yarn
 
-### 1. Clona el repositorio
-
-```bash
-git clone https://github.com/tuusuario/docutrack.git
+1. Clone the repository
+git clone https://github.com/Jahir-Ag/DocuTrack.git
 cd docutrack
-```
 
-### 2. Backend
-
-```bash
+2. Backend Setup
 cd backend
-cp .env.example .env  # Asegúrate de configurar tus variables de entorno
+cp .env.example .env  # Make sure to configure your environment variables
 npm install
 npx prisma generate
 npx prisma migrate dev --name init
 npm start
-```
 
-### 3. Frontend
-
-```bash
+3. Frontend Setup
 cd ../frontend
 npm install
 npm run dev
-```
 
----
+🔐 Security and Access
 
-## 🔐 Seguridad y Acceso
+JWT authentication to protect private routes.
 
-- Autenticación con **JWT** para proteger rutas privadas.
-- Sistema de roles: **USER** y **ADMIN**, con verificación de permisos en el backend.
+Role system: USER and ADMIN, with permission verification handled in the backend.
 
----
+📄 Dynamic Certificates
 
-## 📄 Certificados Dinámicos
+Certificates are generated as custom PDF files containing the citizen’s data.
+They are available for download once the request has been approved.
 
-Los certificados emitidos se generan como archivos PDF personalizados con los datos ingresados por el ciudadano. Están disponibles para descarga una vez el trámite es aprobado.
 
----
 
-## 🧠 Futuras Mejoras
-
-- Notificaciones automáticas por correo electrónico.
-- Firma digital en certificados.
-- Historial completo de trámites por usuario.
-- Panel de métricas para administradores.
-
----
-
-## Despliegue
+## 🚀 Deployment
 
 - [DocuTrack](https://docu-track-beta.vercel.app/)
-- Despliegue
 - Frontend: Vercel
 - Backend: Railway
-- Base de datos: PostgreSQL
+- Database: PostgreSQL
 
 
-## 🤝 Autor
+## 🤝 Author
 
 - [Jahir Agudo](https://github.com/Jahir-Ag)
-- Desarrollador Full Stack
+- Full Stack developer 
 
 ---
