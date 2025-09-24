@@ -27,7 +27,7 @@ Detailed review of each request, with access to applicant data and documents.
 
 Administrative actions: Approve, Reject, or Request corrections, automatically updating the status for the user.
 
-⚙️ Technologies Used
+## ⚙️ Technologies Used
 Layer	Technology	Reason
 Frontend	React.js	Modern, modular, and efficient library for SPAs.
 Backend	Node.js + Express	Lightweight, fast, and widely used for REST services.
@@ -37,7 +37,9 @@ Authentication	JWT	To secure routes and manage sessions safely.
 PDF Generation	pdf-lib (or similar)	To dynamically generate certificates with applicant data.
 Frontend Deployment	Vercel	Simple CI/CD and automatic scalability.
 Backend Deployment	Railway	Efficient hosting with built-in PostgreSQL support.
-🗂️ Project Structure
+
+
+## 🗂️ Project Structure
 DocuTrack/
 │
 ├── backend/               # REST API (Node.js + Express + Prisma)
@@ -51,7 +53,8 @@ DocuTrack/
     ├── pages/             # User and admin routes
     └── services/          # API connection logic
 
-🛠️ Installation and Local Setup
+
+## 🛠️ Installation and Local Setup
 Requirements
 
 Node.js (v18+)
